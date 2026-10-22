@@ -5,41 +5,100 @@ export interface MenuItem {
   label: string;
   icon: IconName;
   danger?: boolean;
+  /** Coche affichée à droite (tri actif, favori…). */
+  checked?: boolean;
   action: () => void;
 }
 
-defineProps<{ items: MenuItem[]; label: string }>();
+const props = defineProps<{ items: MenuItem[]; label: string }>();
 const open = ref(false);
-const root = ref<HTMLElement | null>(null);
 /** Ouvre le menu vers le haut quand il n'y a pas la place en dessous (bas de page, barre d'onglets mobile). */
 const up = ref(false);
+const root = ref<HTMLElement | null>(null);
+const trigger = ref<HTMLButtonElement | null>(null);
+const entries = ref<HTMLButtonElement[]>([]);
+const menuId = useId();
 
-function toggle() {
-  if (!open.value && root.value) up.value = window.innerHeight - root.value.getBoundingClientRect().bottom < 280;
-  open.value = !open.value;
+function focusEntry(index: number) {
+  const count = props.items.length;
+  entries.value[((index % count) + count) % count]?.focus();
 }
 
-function onDocumentClick(event: MouseEvent) {
-  if (!root.value?.contains(event.target as Node)) open.value = false;
+async function show(focusIndex = 0) {
+  if (root.value) up.value = window.innerHeight - root.value.getBoundingClientRect().bottom < 280;
+  open.value = true;
+  await nextTick();
+  focusEntry(focusIndex);
 }
-onMounted(() => document.addEventListener('click', onDocumentClick));
-onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick));
+
+function hide(returnFocus = true) {
+  if (!open.value) return;
+  open.value = false;
+  if (returnFocus) trigger.value?.focus();
+}
+
+function onTriggerKeydown(event: KeyboardEvent) {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    void show(event.key === 'ArrowDown' ? 0 : -1);
+  }
+}
+
+function onMenuKeydown(event: KeyboardEvent) {
+  const current = entries.value.indexOf(document.activeElement as HTMLButtonElement);
+  const moves: Record<string, number> = { ArrowDown: current + 1, ArrowUp: current - 1, Home: 0, End: -1 };
+  if (event.key in moves) {
+    event.preventDefault();
+    focusEntry(moves[event.key]!);
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    hide();
+  } else if (event.key === 'Tab') {
+    hide(false);
+  }
+}
+
+function onDocumentPointer(event: Event) {
+  if (!root.value?.contains(event.target as Node)) hide(false);
+}
+onMounted(() => document.addEventListener('pointerdown', onDocumentPointer));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPointer));
 
 function run(item: MenuItem) {
-  open.value = false;
+  hide();
   item.action();
 }
 </script>
 
 <template>
-  <div ref="root" class="menu-root" @click.stop>
-    <button class="icon-btn trigger" type="button" :aria-label="label" aria-haspopup="menu" :aria-expanded="open" @click="toggle">
+  <div ref="root" class="menu-root" @click.stop @dblclick.stop>
+    <button
+      ref="trigger"
+      class="icon-btn trigger"
+      type="button"
+      :aria-label="label"
+      aria-haspopup="menu"
+      :aria-expanded="open"
+      :aria-controls="open ? menuId : undefined"
+      @click="open ? hide() : show()"
+      @keydown="onTriggerKeydown"
+    >
       <span class="dots" aria-hidden="true">•••</span>
     </button>
-    <ul v-if="open" class="menu" :class="{ up }" role="menu" @keydown.esc="open = false">
+    <ul v-if="open" :id="menuId" class="menu" :class="{ up }" role="menu" :aria-label="label" @keydown="onMenuKeydown">
       <li v-for="item in items" :key="item.label" role="none">
-        <button type="button" role="menuitem" :class="{ danger: item.danger }" @click="run(item)">
-          <AppIcon :name="item.icon" :size="13" />{{ item.label }}
+        <button
+          ref="entries"
+          type="button"
+          :role="item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'"
+          :aria-checked="item.checked"
+          tabindex="-1"
+          :class="{ danger: item.danger }"
+          @click="run(item)"
+        >
+          <AppIcon :name="item.icon" :size="13" /><span class="grow">{{ item.label }}</span>
+          <AppIcon v-if="item.checked" name="check" :size="11" class="tick" />
         </button>
       </li>
     </ul>
@@ -66,7 +125,7 @@ function run(item: MenuItem) {
   right: 0;
   top: calc(100% + 4px);
   z-index: 40;
-  min-width: 200px;
+  min-width: 210px;
   margin: 0;
   padding: 6px;
   list-style: none;
@@ -90,17 +149,24 @@ function run(item: MenuItem) {
   border: none;
   border-radius: var(--radius-sm);
   background: none;
+  color: var(--text);
   font-size: 13px;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
 
-.menu button:hover {
+.menu button:hover,
+.menu button:focus-visible {
   background: var(--surface-muted);
+  outline: none;
 }
 
 .menu button.danger {
   color: var(--danger);
+}
+
+.tick {
+  color: var(--primary);
 }
 </style>

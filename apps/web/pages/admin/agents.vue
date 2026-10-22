@@ -2,6 +2,7 @@
 useHead({ title: 'Agents locaux · DashIA' });
 
 const { data, error: loadError, refresh } = await useFetch('/api/admin/agent-keys', { key: 'agent-keys' });
+const { ask } = useConfirm();
 const name = ref('');
 const createdKey = ref<{ name: string; key: string } | null>(null);
 const error = ref<string | null>(null);
@@ -23,7 +24,7 @@ async function create() {
 }
 
 async function revoke(id: string, keyName: string) {
-  if (!confirm(`Révoquer la clé de « ${keyName} » ? L'agent de cette machine sera déconnecté.`)) return;
+  if (!await ask({ title: `Révoquer la clé de « ${keyName} » ?`, message: "L'agent de cette machine sera déconnecté.", confirm: 'Révoquer', danger: true })) return;
   error.value = null;
   try {
     await $fetch(`/api/admin/agent-keys/${id}`, { method: 'DELETE' });

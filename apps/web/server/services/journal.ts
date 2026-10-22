@@ -1,9 +1,12 @@
-import { and, desc, eq, inArray, lt, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { db, schema } from '../db';
 import { listActivity } from './activity';
 import { listRuns } from './routines';
 
 const { pendingActions, files } = schema;
+
+/** Date d'analyse d'un document (les fichiers analysés avant `processed_at` retombent sur `updated_at`). */
+const processedAt = sql<Date>`coalesce(${files.processedAt}, ${files.updatedAt})`.mapWith((value: string | Date) => new Date(value));
 
 export type JournalCategory = 'actions' | 'documents' | 'routines';
 
@@ -45,10 +48,10 @@ export async function listJournal(userId: string, options: { before?: Date; limi
       ne(pendingActions.status, 'pending'),
       before ? lt(pendingActions.updatedAt, before) : undefined,
     )).orderBy(desc(pendingActions.updatedAt)).limit(limit),
-    db.select({ id: files.id, name: files.name, status: files.status, analysis: files.analysis, error: files.error, updatedAt: files.updatedAt })
+    db.select({ id: files.id, name: files.name, status: files.status, analysis: files.analysis, error: files.error, updatedAt: processedAt })
       .from(files)
-      .where(and(eq(files.userId, userId), inArray(files.status, ['ready', 'failed']), before ? lt(files.updatedAt, before) : undefined))
-      .orderBy(desc(files.updatedAt)).limit(limit),
+      .where(and(eq(files.userId, userId), isNull(files.deletedAt), inArray(files.status, ['ready', 'failed']), before ? lt(processedAt, before) : undefined))
+      .orderBy(desc(processedAt)).limit(limit),
     listRuns(userId, limit),
   ]);
 

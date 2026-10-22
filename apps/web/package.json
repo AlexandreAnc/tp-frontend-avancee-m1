@@ -26,6 +26,7 @@
     "@vite-pwa/nuxt": "^1.1.1",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",
+    "fflate": "0.8.2",
     "file-type": "^22.2.0",
     "googleapis": "^187.0.0",
     "h3": "~1.15.11",

@@ -4,7 +4,10 @@ import { defineAppHandler } from '../../utils/handler';
 import { requireUser } from '../../utils/session';
 import { getUuidParam, readValidatedBodyOrThrow } from '../../utils/validation';
 
-const bodySchema = z.object({ name: z.string().min(1).max(120).optional(), parentId: z.uuid().nullable().optional() });
+const bodySchema = z.object({
+  name: z.string().min(1).max(120).optional(), parentId: z.uuid().nullable().optional(),
+  starred: z.boolean().optional(),
+});
 
 export default defineAppHandler(async (event) => {
   const user = await requireUser(event);

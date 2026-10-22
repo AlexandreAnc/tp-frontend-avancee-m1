@@ -1,4 +1,4 @@
-import { and, cosineDistance, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, cosineDistance, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import { db, schema } from '../db';
 import { getEnv } from '../utils/env';
 import { AppError } from '../utils/errors';
@@ -27,6 +27,7 @@ export async function semanticSearch(userId: string, input: {
     .innerJoin(files, eq(files.id, chunks.fileId))
     .where(and(
       eq(chunks.userId, userId),
+      isNull(files.deletedAt),
       eq(chunks.embedModel, input.embedModel),
       input.fileIds?.length ? inArray(chunks.fileId, input.fileIds) : undefined,
     ))
@@ -58,7 +59,7 @@ export async function exactSearch(userId: string, input: { query: string; limit:
   })
     .from(chunks)
     .innerJoin(files, eq(files.id, chunks.fileId))
-    .where(and(eq(chunks.userId, userId), ilike(chunks.content, `%${escapeLike(input.query)}%`)))
+    .where(and(eq(chunks.userId, userId), isNull(files.deletedAt), ilike(chunks.content, `%${escapeLike(input.query)}%`)))
     .orderBy(chunks.fileId, chunks.chunkIndex)
     .limit(input.limit);
 

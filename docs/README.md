@@ -7,9 +7,14 @@ Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une ma
 ## Fonctionnalités
 
 - **Comptes utilisateurs** : inscription, connexion, sessions.
-- **Drive personnel** : upload de fichiers (PDF, Word, Excel, txt, md, images JPG/PNG/HEIC lues par le modèle vision), dossiers et sous-dossiers (fil d'Ariane, déplacement par glisser-déposer ou menu, sélection multiple, vue liste ou grille), catégories suggérées par l'agent (« Classer dans » range aussi le fichier dans le dossier du même nom), recherche sur tout le drive, aperçu des documents. L'agent peut aussi ranger un fichier (outil `move_file`, action directe annulable depuis le journal).
+- **Drive personnel** : upload de fichiers (PDF, Word, Excel, txt, md, images JPG/PNG/HEIC lues par le modèle vision), dossiers et sous-dossiers (fil d'Ariane, déplacement par glisser-déposer ou menu, sélection multiple, appui long sur mobile, vue liste ou grille), vues Récents et Favoris, catégories suggérées par l'agent (« Classer dans » range aussi le fichier dans le dossier du même nom), aperçu des documents.
+  - **Recherche** sur tout le drive : noms, résumés et **contenu des documents** (plein texte PostgreSQL, extrait surligné) ; « Demander à l'agent » pour une recherche par le sens.
+  - **Corbeille** : un fichier supprimé y reste 30 jours (restaurable dans son dossier d'origine, recréé si besoin), puis est purgé chaque nuit.
+  - **Liens de partage** temporaires (1 h, 24 h, 7 j) : téléchargement sans compte, révocables, jeton stocké haché.
+  - **Téléchargement .zip** d'un dossier ou de tout le drive (200 Mo max).
+  - **Rangement automatique** (réglage) : chaque document analysé part dans le dossier de sa catégorie. L'agent peut aussi ranger un fichier (outil `move_file`). Dans les deux cas, action directe annulable depuis le journal.
   - **50 Mo maximum par fichier**
-  - **500 Mo de stockage par compte** (pas de limite sur le nombre de fichiers)
+  - **500 Mo de stockage par compte**, corbeille comprise (pas de limite sur le nombre de fichiers)
 - **Analyse automatique à l'upload** : type de document, résumé, infos clés (dates, montants, noms), suggestions d'actions.
 - **Chat agentique** : l'agent choisit lui-même ses outils (recherche sémantique, lecture de fichier, liste, recherche exacte) et affiche ses étapes en direct.
 - **Connecteurs** : Google Agenda pour commencer, architecture MCP pour en ajouter d'autres.

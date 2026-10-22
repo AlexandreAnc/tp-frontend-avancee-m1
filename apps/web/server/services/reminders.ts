@@ -1,5 +1,5 @@
 import { type ReminderStatus } from '@app/shared';
-import { and, asc, eq, gte, lt, ne } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lt, ne } from 'drizzle-orm';
 import { db, schema } from '../db';
 import type { ReminderSource } from '../db/schema';
 import { getBoss } from '../jobs/boss';
@@ -40,7 +40,7 @@ function publish(row: ReminderRow) {
 
 async function assertOwnFile(userId: string, fileId: string | undefined) {
   if (!fileId) return;
-  const [file] = await db.select({ id: files.id }).from(files).where(and(eq(files.id, fileId), eq(files.userId, userId)));
+  const [file] = await db.select({ id: files.id }).from(files).where(and(eq(files.id, fileId), eq(files.userId, userId), isNull(files.deletedAt)));
   if (!file) throw notFound('Document');
 }
 

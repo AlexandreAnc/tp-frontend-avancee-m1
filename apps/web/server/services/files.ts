@@ -8,7 +8,7 @@ import {
   type FileStatus,
   type IndexFileRequest,
 } from '@app/shared';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db, schema, type DbExecutor } from '../db';
 import { detectMimeType } from '../utils/detect-mime';
 import { getEnv } from '../utils/env';
@@ -23,6 +23,9 @@ const { files, chunks } = schema;
 
 export type StoredFile = typeof files.$inferSelect;
 
+/** Condition « hors corbeille », à ajouter à toute requête qui liste ou lit des fichiers. */
+export const activeFile = isNull(files.deletedAt);
+
 /** Champs exposés au front (sans le texte extrait). */
 export function toFileDto(file: StoredFile) {
   return {
@@ -34,6 +37,8 @@ export function toFileDto(file: StoredFile) {
     analysis: file.analysis,
     category: file.category,
     folderId: file.folderId,
+    starred: file.starred,
+    deletedAt: file.deletedAt?.toISOString() ?? null,
     error: file.error,
     createdAt: file.createdAt.toISOString(),
     updatedAt: file.updatedAt.toISOString(),
@@ -142,21 +147,23 @@ async function enqueueIndexing(file: StoredFile): Promise<void> {
 /** Fichiers en attente ou en cours d'analyse, du plus ancien au plus récent. */
 export async function listPendingFiles(userId: string) {
   return db.select({ id: files.id, name: files.name, status: files.status }).from(files)
-    .where(and(eq(files.userId, userId), inArray(files.status, ['pending', 'processing'])))
+    .where(and(eq(files.userId, userId), activeFile, inArray(files.status, ['pending', 'processing'])))
     .orderBy(files.createdAt);
 }
 
 export async function listFiles(userId: string): Promise<StoredFile[]> {
-  return db.select().from(files).where(eq(files.userId, userId)).orderBy(desc(files.createdAt));
+  return db.select().from(files).where(and(eq(files.userId, userId), activeFile)).orderBy(desc(files.createdAt));
 }
 
-export async function getFile(userId: string, fileId: string): Promise<StoredFile> {
-  const [file] = await db.select().from(files).where(and(eq(files.id, fileId), eq(files.userId, userId)));
+/** Fichier hors corbeille (`includeTrashed` pour la corbeille elle-même). */
+export async function getFile(userId: string, fileId: string, options: { includeTrashed?: boolean } = {}): Promise<StoredFile> {
+  const [file] = await db.select().from(files)
+    .where(and(eq(files.id, fileId), eq(files.userId, userId), options.includeTrashed ? undefined : activeFile));
   if (!file) throw notFound('Fichier');
   return file;
 }
 
-/** Supprime le fichier, ses chunks et embeddings (cascade) et le fichier stocké. */
+/** Supprime définitivement le fichier, ses chunks et embeddings (cascade) et le fichier stocké. Voir aussi `trash.ts`. */
 export async function deleteFile(userId: string, fileId: string): Promise<void> {
   const [deleted] = await db.delete(files)
     .where(and(eq(files.id, fileId), eq(files.userId, userId)))
@@ -181,7 +188,7 @@ export async function reindexFile(userId: string, fileId: string): Promise<FileD
 
 export async function setFileCategory(userId: string, fileId: string, category: FileCategory | null): Promise<FileDto> {
   const [file] = await db.update(files).set({ category })
-    .where(and(eq(files.id, fileId), eq(files.userId, userId)))
+    .where(and(eq(files.id, fileId), eq(files.userId, userId), activeFile))
     .returning();
   if (!file) throw notFound('Fichier');
   publishToUser(userId, { type: 'file.updated', fileId, status: file.status });
@@ -190,7 +197,7 @@ export async function setFileCategory(userId: string, fileId: string, category: 
 
 export async function setFileStatus(userId: string, fileId: string, status: FileStatus, error: string | null = null): Promise<StoredFile> {
   const [file] = await db.update(files)
-    .set({ status, error })
+    .set({ status, error, ...(status === 'failed' ? { processedAt: new Date() } : {}) })
     .where(and(eq(files.id, fileId), eq(files.userId, userId)))
     .returning();
   if (!file) throw notFound('Fichier');
@@ -229,6 +236,7 @@ export async function saveFileIndex(userId: string, fileId: string, data: IndexF
       embedModel: data.embedModel,
       status: 'ready',
       error: null,
+      processedAt: new Date(),
     }).where(and(eq(files.id, fileId), eq(files.userId, userId)));
   });
 
@@ -249,7 +257,7 @@ export async function readFileText(userId: string, fileId: string, range: { offs
     name: files.name,
     totalLength: sql<number>`coalesce(char_length(${files.extractedText}), 0)`.mapWith(Number),
     text: sql<string>`coalesce(substring(${files.extractedText} from ${range.offset + 1}::int for ${range.length}::int), '')`,
-  }).from(files).where(and(eq(files.id, fileId), eq(files.userId, userId)));
+  }).from(files).where(and(eq(files.id, fileId), eq(files.userId, userId), activeFile));
   if (!row) throw notFound('Fichier');
   return { fileId: row.id, name: row.name, text: row.text, offset: range.offset, totalLength: row.totalLength };
 }

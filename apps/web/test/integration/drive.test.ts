@@ -12,6 +12,7 @@ vi.mock('../../server/services/tasks', () => ({
 const drive = await import('../../server/services/drive');
 const files = await import('../../server/services/files');
 const { executeAction, undoAction } = await import('../../server/connectors/registry');
+const trash = await import('../../server/services/trash');
 
 const upload = (userId: string, fileName: string, folderId: string | null = null) =>
   files.uploadFile(userId, { fileName, stream: textStream('contenu'), folderId });
@@ -41,7 +42,7 @@ describe.skipIf(skipDb)('drive : dossiers', () => {
     await upload(userId, 'facture.txt');
 
     const result = await drive.browse(userId, { folderId: null, query: 'quittance' });
-    expect(result.search).toBe(true);
+    expect(result.view).toBe('search');
     expect(result.files).toEqual([expect.objectContaining({ name: 'quittance-mars.txt', path: 'Logement' })]);
   });
 
@@ -68,13 +69,13 @@ describe.skipIf(skipDb)('drive : dossiers', () => {
     const sub = await drive.createFolder(userId, { name: 'Sous-dossier', parentId: folder.id });
     const file = await upload(userId, 'garde.txt', folder.id);
 
-    expect(await drive.deleteFolder(userId, folder.id, 'keep')).toEqual({ deletedFiles: 0 });
+    expect(await drive.deleteFolder(userId, folder.id, 'keep')).toEqual({ trashedFiles: 0 });
     expect((await files.getFile(userId, file.id)).folderId).toBe(parent.id);
     const [moved] = await db.select().from(schema.folders).where(eq(schema.folders.id, sub.id));
     expect(moved?.parentId).toBe(parent.id);
   });
 
-  it('supprime un dossier et tous les fichiers de ses sous-dossiers', async () => {
+  it('supprime un dossier : ses fichiers, sous-dossiers compris, partent à la corbeille', async () => {
     const userId = await createUser();
     const folder = await drive.createFolder(userId, { name: 'Archives', parentId: null });
     const sub = await drive.createFolder(userId, { name: '2019', parentId: folder.id });
@@ -82,9 +83,10 @@ describe.skipIf(skipDb)('drive : dossiers', () => {
     await upload(userId, 'b.txt', sub.id);
     const kept = await upload(userId, 'c.txt');
 
-    expect(await drive.deleteFolder(userId, folder.id, 'all')).toEqual({ deletedFiles: 2 });
+    expect(await drive.deleteFolder(userId, folder.id, 'all')).toEqual({ trashedFiles: 2 });
     expect((await files.listFiles(userId)).map((item) => item.id)).toEqual([kept.id]);
     expect(await drive.listFolderTree(userId)).toEqual([]);
+    expect((await trash.listTrash(userId)).map((item) => [item.name, item.path]).sort()).toEqual([['a.txt', 'Archives'], ['b.txt', 'Archives / 2019']]);
   });
 
   it('isole les dossiers et fichiers entre utilisateurs', async () => {
@@ -126,5 +128,86 @@ describe.skipIf(skipDb)('drive : dossiers', () => {
 
     await undoAction(userId, 'drive.move_file', result);
     expect((await files.getFile(userId, file.id)).folderId).toBeNull();
+  });
+
+  it('garantit en base des noms uniques, même avec des créations simultanées', async () => {
+    const userId = await createUser();
+    const results = await Promise.allSettled([
+      drive.createFolder(userId, { name: 'Santé', parentId: null }),
+      drive.createFolder(userId, { name: 'sante', parentId: null }),
+      drive.ensureFolderPath(userId, 'SANTÉ'),
+    ]);
+    expect(await drive.listFolderTree(userId)).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toEqual([expect.objectContaining({ reason: expect.objectContaining({ code: 'conflict' }) })]);
+  });
+
+  it('vues Favoris et Récents', async () => {
+    const userId = await createUser();
+    const folder = await drive.createFolder(userId, { name: 'Projets', parentId: null });
+    const file = await upload(userId, 'plan.txt', folder.id);
+    await upload(userId, 'autre.txt');
+    await drive.updateFolder(userId, folder.id, { starred: true });
+    await drive.updateFileMeta(userId, file.id, { starred: true });
+
+    const starred = await drive.browse(userId, { folderId: null, view: 'starred' });
+    expect(starred.folders.map((item) => item.name)).toEqual(['Projets']);
+    expect(starred.files.map((item) => item.name)).toEqual(['plan.txt']);
+    const recent = await drive.browse(userId, { folderId: null, view: 'recent' });
+    expect(recent.files.map((item) => item.name)).toEqual(['autre.txt', 'plan.txt']);
+  });
+});
+
+describe.skipIf(skipDb)('drive : corbeille', () => {
+  it('met à la corbeille, masque partout, puis restaure dans le dossier d’origine', async () => {
+    const userId = await createUser();
+    const folder = await drive.createFolder(userId, { name: 'Banque', parentId: null });
+    const file = await upload(userId, 'releve.txt', folder.id);
+
+    await trash.trashFiles(userId, [file.id]);
+    expect(await files.listFiles(userId)).toEqual([]);
+    await expect(files.getFile(userId, file.id)).rejects.toMatchObject({ code: 'not_found' });
+    expect((await drive.browse(userId, { folderId: folder.id })).files).toEqual([]);
+    // La corbeille compte dans le quota tant qu'elle n'est pas vidée.
+    expect((await files.getQuota(userId)).usedBytes).toBe(7);
+
+    await trash.restoreFiles(userId, [file.id]);
+    expect((await files.getFile(userId, file.id)).folderId).toBe(folder.id);
+  });
+
+  it('recrée le dossier d’origine à la restauration s’il a été supprimé', async () => {
+    const userId = await createUser();
+    const parent = await drive.createFolder(userId, { name: 'Impôts', parentId: null });
+    const child = await drive.createFolder(userId, { name: '2025', parentId: parent.id });
+    const file = await upload(userId, 'avis.txt', child.id);
+    await drive.deleteFolder(userId, parent.id, 'all');
+
+    await trash.restoreFiles(userId, [file.id]);
+    const tree = await drive.listFolderTree(userId);
+    expect(drive.pathLabel(tree, (await files.getFile(userId, file.id)).folderId)).toBe('Impôts / 2025');
+  });
+
+  it('suppression définitive et purge automatique après 30 jours', async () => {
+    const userId = await createUser();
+    const old = await upload(userId, 'ancien.txt');
+    const recent = await upload(userId, 'recent.txt');
+    const gone = await upload(userId, 'jete.txt');
+    await trash.trashFiles(userId, [old.id, recent.id, gone.id]);
+    await db.update(schema.files).set({ deletedAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) }).where(eq(schema.files.id, old.id));
+
+    await trash.deleteForever(userId, [gone.id]);
+    await trash.purgeExpiredTrash();
+    expect((await trash.listTrash(userId)).map((item) => item.name)).toEqual(['recent.txt']);
+    expect((await files.getQuota(userId)).usedBytes).toBe(7);
+  });
+
+  it('isole la corbeille entre utilisateurs', async () => {
+    const alice = await createUser();
+    const bob = await createUser();
+    const file = await upload(alice, 'a.txt');
+    await expect(trash.trashFiles(bob, [file.id])).rejects.toMatchObject({ code: 'not_found' });
+    await trash.trashFiles(alice, [file.id]);
+    await expect(trash.restoreFiles(bob, [file.id])).rejects.toMatchObject({ code: 'not_found' });
+    await expect(trash.deleteForever(bob, [file.id])).rejects.toMatchObject({ code: 'not_found' });
+    expect(await trash.listTrash(bob)).toEqual([]);
   });
 });

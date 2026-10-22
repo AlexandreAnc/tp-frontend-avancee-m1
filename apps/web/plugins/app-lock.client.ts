@@ -5,8 +5,9 @@ export default defineNuxtPlugin(() => {
   async function loadSetting() {
     try {
       const { settings } = await $fetch('/api/settings');
-      // Sans WebAuthn, impossible de déverrouiller par biométrie : pas de verrouillage.
-      lock.lockAfterMinutes.value = supported ? settings.lockAfterMinutes : null;
+      // Sans WebAuthn ni code de secours, impossible de déverrouiller : pas de verrouillage.
+      lock.hasPin.value = settings.hasUnlockPin;
+      lock.lockAfterMinutes.value = supported || settings.hasUnlockPin ? settings.lockAfterMinutes : null;
       lock.evaluate();
     } catch {
       // Non connecté ou hors ligne : pas de verrouillage.

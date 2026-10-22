@@ -35,7 +35,7 @@ const facts = computed(() => {
     <footer class="actions">
       <button class="btn btn-sm btn-ink" type="button" @click="emit('preview', file.id)"><AppIcon name="eye" :size="12" />Aperçu</button>
       <button class="btn btn-sm" type="button" @click="emit('reindex', file.id)"><AppIcon name="rotate-right" :size="12" />Réanalyser</button>
-      <button class="btn btn-sm" type="button" @click="emit('delete', file.id)"><AppIcon name="trash" :size="12" />Supprimer</button>
+      <button class="btn btn-sm" type="button" @click="emit('delete', file.id)"><AppIcon name="trash" :size="12" />Corbeille</button>
     </footer>
   </section>
 </template>

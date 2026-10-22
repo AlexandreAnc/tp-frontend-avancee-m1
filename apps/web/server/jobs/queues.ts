@@ -33,6 +33,8 @@ export const MAINTENANCE_QUEUES = {
   digest: 'maintenance.digest',
   /** Chaque minute : routines à déclenchement horaire. */
   routines: 'maintenance.routines',
+  /** Chaque nuit : corbeille du drive (au-delà de la durée de conservation) et liens de partage expirés. */
+  driveCleanup: 'maintenance.drive-cleanup',
 } as const;
 
 /** Envoi d'un rappel, planifié à son heure avec `startAfter`. */

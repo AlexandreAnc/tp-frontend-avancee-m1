@@ -8,6 +8,7 @@ import { getValidatedQueryOrThrow } from '../utils/validation';
 
 const querySchema = z.object({
   folderId: z.uuid().optional(),
+  view: z.enum(['folder', 'recent', 'starred']).default('folder'),
   q: z.string().max(200).optional(),
   category: z.enum(FILE_CATEGORIES).optional(),
 });
@@ -15,7 +16,7 @@ const querySchema = z.object({
 /** Contenu d'un dossier (racine par défaut), ou résultats de recherche sur tout le drive. */
 export default defineAppHandler(async (event) => {
   const user = await requireUser(event);
-  const { folderId, q, category } = getValidatedQueryOrThrow(event, querySchema);
-  const [content, quota] = await Promise.all([browse(user.id, { folderId: folderId ?? null, query: q, category }), getQuota(user.id)]);
+  const { folderId, view, q, category } = getValidatedQueryOrThrow(event, querySchema);
+  const [content, quota] = await Promise.all([browse(user.id, { folderId: folderId ?? null, view, query: q, category }), getQuota(user.id)]);
   return { ...content, quota };
 });

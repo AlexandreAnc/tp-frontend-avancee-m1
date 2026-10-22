@@ -25,10 +25,12 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   vector,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { user } from './auth';
 
 const timestamps = {
@@ -44,8 +46,14 @@ export const folders = pgTable('folders', {
   userId: userId(),
   parentId: uuid('parent_id').references((): AnyPgColumn => folders.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
+  /** Nom sans casse ni accents : garantit en base l'unicité des noms dans un même dossier. */
+  nameKey: text('name_key').notNull(),
+  starred: boolean('starred').notNull().default(false),
   ...timestamps,
-}, (table) => [index('folders_user_parent_idx').on(table.userId, table.parentId)]);
+}, (table) => [
+  index('folders_user_parent_idx').on(table.userId, table.parentId),
+  unique('folders_user_parent_name_key').on(table.userId, table.parentId, table.nameKey).nullsNotDistinct(),
+]);
 
 export const files = pgTable('files', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -63,8 +71,32 @@ export const files = pgTable('files', {
   extractedText: text('extracted_text'),
   embedModel: text('embed_model'),
   error: text('error'),
+  starred: boolean('starred').notNull().default(false),
+  /** Fin de l'analyse (prête ou en échec) : date stable pour le journal, contrairement à `updatedAt`. */
+  processedAt: timestamp('processed_at', { withTimezone: true }),
+  /** Mis à la corbeille (`null` : actif). Purgé définitivement au bout de `TRASH_RETENTION_DAYS`. */
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  /** Chemin d'origine, pour restaurer même si le dossier a été supprimé entre-temps. */
+  trashedFromPath: text('trashed_from_path'),
   ...timestamps,
-}, (table) => [index('files_user_id_idx').on(table.userId), index('files_folder_id_idx').on(table.userId, table.folderId)]);
+}, (table) => [
+  index('files_user_id_idx').on(table.userId),
+  index('files_folder_id_idx').on(table.userId, table.folderId),
+  index('files_deleted_at_idx').on(table.deletedAt),
+]);
+
+/** Liens de téléchargement temporaires d'un fichier (seul le hash du jeton est stocké). */
+export const shareLinks = pgTable('share_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: userId(),
+  fileId: uuid('file_id').notNull().references(() => files.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  downloadCount: integer('download_count').notNull().default(0),
+  lastDownloadAt: timestamp('last_download_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index('share_links_file_idx').on(table.userId, table.fileId)]);
 
 export const chunks = pgTable('chunks', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -78,6 +110,10 @@ export const chunks = pgTable('chunks', {
 }, (table) => [
   uniqueIndex('chunks_file_id_chunk_index_idx').on(table.fileId, table.chunkIndex),
   index('chunks_user_id_idx').on(table.userId),
+  /** Recherche plein texte du drive (racinisation française : « factures » trouve « facture »). */
+  index('chunks_content_fts_idx').using('gin', sql`to_tsvector('french', ${table.content})`),
+  /** Complément sans racinisation (préfixes), le raciniseur français étant irrégulier (« loyer » → « loi »). */
+  index('chunks_content_simple_idx').using('gin', sql`to_tsvector('simple', ${table.content})`),
   index('chunks_embedding_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
 ]);
 
@@ -234,6 +270,12 @@ export const userSettings = pgTable('user_settings', {
   lockAfterMinutes: integer('lock_after_minutes'),
   /** Exiger Face ID / empreinte pour les actions sensibles (quand une passkey existe). */
   biometricForSensitive: boolean('biometric_for_sensitive').notNull().default(true),
+  /** Code de secours (6 chiffres) pour déverrouiller l'app sans Face ID : hash scrypt `sel:hash`, jamais le code. */
+  unlockPinHash: text('unlock_pin_hash'),
+  unlockPinFailures: integer('unlock_pin_failures').notNull().default(0),
+  unlockPinLockedUntil: timestamp('unlock_pin_locked_until', { withTimezone: true }),
+  /** Ranger automatiquement chaque document analysé dans le dossier de sa catégorie. */
+  autoFileDocuments: boolean('auto_file_documents').notNull().default(false),
   ...timestamps,
 });
 

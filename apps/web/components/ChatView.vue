@@ -7,6 +7,7 @@ const props = defineProps<{ conversationId: string | null }>();
 
 const route = useRoute();
 const { online, agent } = useAgentStatus();
+const { ask } = useConfirm();
 const { data: list, refresh: refreshList } = await useFetch('/api/conversations', { key: 'conversations' });
 const conversation = ref<ApiResponse<'/api/conversations/:id', 'get'>['conversation'] | null>(null);
 const loadError = ref<unknown>(null);
@@ -124,7 +125,7 @@ async function retry(messageId: string) {
 }
 
 async function remove() {
-  if (!props.conversationId || !confirm('Supprimer cette discussion ?')) return;
+  if (!props.conversationId || !await ask({ title: 'Supprimer cette discussion ?', confirm: 'Supprimer', danger: true })) return;
   await $fetch(`/api/conversations/${props.conversationId}`, { method: 'DELETE' });
   await refreshList();
   await navigateTo('/chat');

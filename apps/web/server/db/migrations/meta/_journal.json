@@ -64,6 +64,34 @@
       "when": 1792680729521,
       "tag": "0008_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792702703953,
+      "tag": "0009_drive-trash-share",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792702778825,
+      "tag": "0010_file-processed-at",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792703148343,
+      "tag": "0011_chunks-simple-fts",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792703477570,
+      "tag": "0012_unlock-pin",
+      "breakpoints": true
     }
   ]
 }

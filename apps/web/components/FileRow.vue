@@ -12,6 +12,7 @@ export interface FileItem {
   error: string | null;
   createdAt: string;
   folderId?: string | null;
+  starred?: boolean;
   /** Chemin du dossier (« Logement / 2026 »), renvoyé par `/api/drive`. */
   path?: string;
 }
@@ -51,7 +52,7 @@ const chips = computed(() => {
       <span v-for="chip in chips" :key="chip.label" class="tag" :class="chip.tone">{{ chip.label }}</span>
     </div>
     <div v-if="file.status === 'failed'" class="buttons" @click.stop>
-      <button class="btn btn-sm" type="button" @click="emit('delete', file.id)">Supprimer</button>
+      <button class="btn btn-sm" type="button" @click="emit('delete', file.id)">Corbeille</button>
       <button class="btn btn-sm btn-danger" type="button" @click="emit('reindex', file.id)"><AppIcon name="rotate-right" :size="12" />Réessayer</button>
     </div>
   </article>

@@ -5,6 +5,7 @@ useHead({ title: 'Réglages · DashIA' });
 
 const route = useRoute();
 const { me } = useMe();
+const { ask } = useConfirm();
 const { online, agent } = useAgentStatus();
 const push = usePush();
 const { signOut } = useAuth();
@@ -76,6 +77,9 @@ const storage = computed(() => {
     { label: 'Tableurs', color: 'var(--amber)', test: (type: string) => type.includes('spreadsheet') },
     { label: 'Texte', color: 'var(--text-muted)', test: (type: string) => type.startsWith('text/') },
   ].map((group) => ({ ...group, bytes: files.filter((file) => group.test(file.mimeType)).reduce((sum, file) => sum + file.sizeBytes, 0) }));
+  // Le quota compte aussi la corbeille, absente de la liste des fichiers.
+  const trashBytes = quota.usedBytes - groups.reduce((sum, group) => sum + group.bytes, 0);
+  if (trashBytes > 0) groups.push({ label: 'Corbeille', color: 'var(--danger)', test: () => false, bytes: trashBytes });
   return { ...quota, groups, percent: Math.round((quota.usedBytes / quota.maxBytes) * 100) };
 });
 
@@ -122,6 +126,30 @@ async function setLock(value: number | null) {
   await $reloadAppLock();
 }
 
+// ── Sécurité : code de secours ─────────────────────────────────
+const pinPrompt = ref<{ open: (options: { title: string; label: string; confirm?: string; numeric?: boolean }) => void } | null>(null);
+
+function definePin() {
+  pinPrompt.value?.open({ title: settings.value?.hasUnlockPin ? 'Nouveau code de secours' : 'Code de secours', label: '6 chiffres, pour déverrouiller sans Face ID', confirm: 'Enregistrer', numeric: true });
+}
+
+const savePin = (pin: string) => run('pin', async () => {
+  await $fetch<unknown>('/api/me/pin', { method: 'PUT', body: { pin } });
+  await refreshSettings();
+  await $reloadAppLock();
+}, 'Code de secours enregistré.');
+
+async function removePin() {
+  if (!await ask({ title: 'Retirer le code de secours ?', message: 'Seul Face ID / empreinte permettra de déverrouiller l’app.', confirm: 'Retirer', danger: true })) return;
+  await run('pin', async () => {
+    await $fetch<unknown>('/api/me/pin', { method: 'DELETE' });
+    await refreshSettings();
+    await $reloadAppLock();
+  }, 'Code de secours retiré.');
+}
+
+const canLock = computed(() => passkeys.value.length > 0 || Boolean(settings.value?.hasUnlockPin));
+
 // ── Notifications ──────────────────────────────────────────────
 const togglePush = () => run('push', () => (push.subscribed.value ? push.unsubscribe() : push.subscribe()));
 
@@ -137,12 +165,12 @@ function exportData() {
 }
 
 async function clearHistory() {
-  if (!confirm('Effacer toutes vos discussions ? Les documents et le planning sont conservés.')) return;
+  if (!await ask({ title: 'Effacer toutes vos discussions ?', message: 'Les documents et le planning sont conservés.', confirm: 'Effacer', danger: true })) return;
   await run('history', () => withStepUp(() => $fetch<{ deleted: number }>('/api/conversations', { method: 'DELETE' })), 'Historique des discussions effacé.');
 }
 
 async function deleteAccount() {
-  if (!confirm('Supprimer définitivement votre compte, vos fichiers et vos discussions ?')) return;
+  if (!await ask({ title: 'Supprimer votre compte ?', message: 'Votre compte, vos fichiers et vos discussions seront supprimés définitivement.', confirm: 'Supprimer le compte', danger: true })) return;
   await run('account', async () => {
     await withStepUp(() => $fetch<{ ok: boolean }>('/api/me', { method: 'DELETE' }));
     await signOut();
@@ -218,6 +246,16 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
             <li v-for="group in storage.groups" :key="group.label"><i :style="{ background: group.color }" />{{ group.label }} · {{ formatBytes(group.bytes) }}</li>
           </ul>
           <NuxtLink to="/drive" class="btn btn-block"><AppIcon name="broom" :size="12" />Gérer le drive</NuxtLink>
+          <SettingsRow icon="wand" tone="tone-primary" title="Ranger automatiquement" subtitle="Chaque document analysé va dans le dossier de sa catégorie (annulable dans le journal)">
+            <button
+              class="switch"
+              type="button"
+              role="switch"
+              :aria-checked="settings?.autoFileDocuments ?? false"
+              aria-label="Ranger automatiquement les documents"
+              @click="updateSettings({ autoFileDocuments: !settings?.autoFileDocuments })"
+            />
+          </SettingsRow>
         </div>
       </section>
 
@@ -239,11 +277,15 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
             @click="updateSettings({ biometricForSensitive: !settings?.biometricForSensitive })"
           />
         </SettingsRow>
-        <SettingsRow icon="lock" tone="tone-ink" title="Verrouillage automatique" :subtitle="passkeys.length ? 'Face ID demandé à la réouverture' : 'Ajoutez d’abord Face ID / empreinte'">
+        <SettingsRow icon="key" tone="tone-ink" title="Code de secours" :subtitle="settings?.hasUnlockPin ? 'Défini · déverrouille l’app sans Face ID' : 'Si Face ID n’est pas disponible (gants, autre appareil…)'">
+          <button v-if="settings?.hasUnlockPin" class="icon-btn" type="button" aria-label="Retirer le code de secours" :disabled="busy === 'pin'" @click="removePin"><AppIcon name="trash" :size="12" /></button>
+          <button class="btn btn-sm" type="button" :disabled="busy === 'pin'" @click="definePin">{{ settings?.hasUnlockPin ? 'Modifier' : 'Définir' }}</button>
+        </SettingsRow>
+        <SettingsRow icon="lock" tone="tone-ink" title="Verrouillage automatique" :subtitle="canLock ? (passkeys.length ? 'Face ID demandé à la réouverture' : 'Code de secours demandé à la réouverture') : 'Ajoutez d’abord Face ID ou un code de secours'">
           <select
             class="select"
             :value="settings?.lockAfterMinutes ?? 'null'"
-            :disabled="!passkeys.length"
+            :disabled="!canLock"
             aria-label="Délai de verrouillage"
             @change="setLock(($event.target as HTMLSelectElement).value === 'null' ? null : Number(($event.target as HTMLSelectElement).value))"
           >
@@ -328,6 +370,7 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
       <button class="text-btn delete" type="button" :disabled="busy === 'account'" @click="deleteAccount">Supprimer mon compte</button>
       <p class="tiny muted center">DashIA · protocole agent v1</p>
     </main>
+    <TextPromptDialog ref="pinPrompt" @submit="savePin" />
   </div>
 </template>
 

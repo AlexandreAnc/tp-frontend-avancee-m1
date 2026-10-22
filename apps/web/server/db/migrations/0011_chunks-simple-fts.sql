@@ -1,0 +1,1 @@
+CREATE INDEX "chunks_content_simple_idx" ON "chunks" USING gin (to_tsvector('simple', "content"));

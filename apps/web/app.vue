@@ -3,4 +3,5 @@
     <NuxtPage />
   </NuxtLayout>
   <LockScreen />
+  <ConfirmDialog />
 </template>

@@ -61,7 +61,7 @@ Définies dans `packages/shared/src/limits.ts` :
 
 ```ts
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 Mo par fichier
-export const MAX_STORAGE_BYTES_PER_USER = 500 * 1024 * 1024; // 500 Mo de stockage par compte
+export const MAX_STORAGE_BYTES_PER_USER = 500 * 1024 * 1024; // 500 Mo de stockage par compte (corbeille comprise)
 export const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'text/plain',
@@ -84,6 +84,7 @@ export const ALLOWED_MIME_TYPES = [
 ## Sécurité et multi-utilisateur
 
 - **Chaque requête est filtrée par `user_id`**. Aucune requête sur `files`, `chunks`, `conversations`, `messages`, `pending_actions`, `push_subscriptions` ou `connectors` sans ce filtre.
+- **Corbeille** : un fichier avec `deleted_at` n'existe plus pour le drive, la recherche, l'agenda, le journal et les outils de l'agent. Toute requête qui lit `files` (ou y joint `chunks`) ajoute `activeFile` (`services/files.ts`), sauf la corbeille elle-même et le calcul du quota.
 - **L'agent n'accède jamais à la base de données.** Ses outils appellent l'API de prod avec un **token de tâche** : limité à l'utilisateur concerné, à durée courte, invalidé à la fin de la tâche.
 - **Clés d'agent** : une par machine, stockées hashées, révocables individuellement.
 - **Les actions sont exécutées par le serveur, pas par l'agent**, avec les tokens OAuth de l'utilisateur. Chaque type d'action a un **niveau de risque défini dans `packages/shared`** (jamais choisi par l'agent) :

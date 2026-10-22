@@ -13,7 +13,9 @@
 
 Ajouts issus de la maquette DashIA : formats images (vision) et Excel, catégories du drive, aperçu des documents, stats CPU/RAM/VRAM de l'agent, choix du modèle de chat (admin), test de connexion, export des données.
 
-Reste à faire : **Wake-on-LAN** (nécessite un relais toujours allumé sur le réseau local, ex. Raspberry Pi), « Code de secours » de la maquette, déclencheur par lieu (non faisable en PWA).
+Code de secours : fait (6 chiffres, haché scrypt, bloqué 15 min après 5 erreurs ; il déverrouille l'app mais ne remplace pas Face ID pour les actions sensibles).
+
+Reste à faire : **Wake-on-LAN** (nécessite un relais toujours allumé sur le réseau local, ex. Raspberry Pi), déclencheur par lieu (non faisable en PWA).
 
 ## Décisions validées
 

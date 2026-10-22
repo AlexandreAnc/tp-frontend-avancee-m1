@@ -7,12 +7,15 @@ const label = ref('');
 const value = ref('');
 const confirmLabel = ref('Valider');
 const error = ref<string | null>(null);
+/** Code à 6 chiffres : clavier numérique, saisie masquée. */
+const numeric = ref(false);
 
-function open(options: { title: string; label: string; value?: string; confirm?: string }) {
+function open(options: { title: string; label: string; value?: string; confirm?: string; numeric?: boolean }) {
   title.value = options.title;
   label.value = options.label;
   value.value = options.value ?? '';
   confirmLabel.value = options.confirm ?? 'Valider';
+  numeric.value = options.numeric ?? false;
   error.value = null;
   dialog.value?.showModal();
   void nextTick(() => {
@@ -23,8 +26,10 @@ function open(options: { title: string; label: string; value?: string; confirm?:
   });
 }
 
+const valid = computed(() => (numeric.value ? /^\d{6}$/.test(value.value) : Boolean(value.value.trim())));
+
 function submit() {
-  if (!value.value.trim()) return;
+  if (!valid.value) return;
   emit('submit', value.value.trim());
   dialog.value?.close();
 }
@@ -38,12 +43,21 @@ defineExpose({ open, close: () => dialog.value?.close(), setError: (message: str
       <h2>{{ title }}</h2>
       <label class="field">
         <span class="field-label">{{ label }}</span>
-        <input ref="input" v-model="value" class="input" maxlength="255" required>
+        <input
+          ref="input"
+          v-model="value"
+          class="input"
+          :type="numeric ? 'password' : 'text'"
+          :inputmode="numeric ? 'numeric' : undefined"
+          :maxlength="numeric ? 6 : 255"
+          :autocomplete="numeric ? 'new-password' : 'off'"
+          required
+        >
       </label>
       <p v-if="error" class="alert alert-error">{{ error }}</p>
       <div class="buttons">
         <button class="btn" type="button" @click="dialog?.close()">Annuler</button>
-        <button class="btn btn-ink" type="submit" :disabled="!value.trim()">{{ confirmLabel }}</button>
+        <button class="btn btn-ink" type="submit" :disabled="!valid">{{ confirmLabel }}</button>
       </div>
     </form>
   </dialog>

@@ -12,6 +12,7 @@ export const settingsUpdateSchema = z.object({
   notifyReplyReady: z.boolean().optional(),
   lockAfterMinutes: z.union([z.literal(0), z.literal(1), z.literal(5), z.literal(15), z.literal(60)]).nullable().optional(),
   biometricForSensitive: z.boolean().optional(),
+  autoFileDocuments: z.boolean().optional(),
 });
 
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
@@ -34,6 +35,8 @@ export function toSettingsDto(row: typeof userSettings.$inferSelect) {
     notifyReplyReady: row.notifyReplyReady,
     lockAfterMinutes: row.lockAfterMinutes,
     biometricForSensitive: row.biometricForSensitive,
+    autoFileDocuments: row.autoFileDocuments,
+    hasUnlockPin: row.unlockPinHash !== null,
   };
 }
 

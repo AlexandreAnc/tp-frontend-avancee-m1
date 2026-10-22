@@ -65,7 +65,11 @@ const ACTION_HANDLERS: { [T in ProposedAction['type']]: ActionHandler<T> } = {
     },
     undo: async (userId, result) => {
       const { fileId, previousFolderId } = result as { fileId: string; previousFolderId: string | null };
-      await moveFiles(userId, [fileId], previousFolderId);
+      // Le dossier d'origine a pu être supprimé depuis : le fichier revient alors à la racine.
+      await moveFiles(userId, [fileId], previousFolderId).catch(async (error: unknown) => {
+        if (!(error instanceof AppError && error.code === 'not_found' && previousFolderId)) throw error;
+        await moveFiles(userId, [fileId], null);
+      });
     },
   },
   'hue.set_room': hueHandler('set_room'),

@@ -1,5 +1,5 @@
 import type { AgendaItem, AgendaResponse } from '@app/shared';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db, schema } from '../db';
 import type { CalendarEvent } from '../connectors/google/calendar-mcp';
 import { createGoogleCalendarMcpServer } from '../connectors/google/calendar-mcp';
@@ -27,7 +27,7 @@ async function googleEvents(userId: string, from: Date, to: Date): Promise<Calen
 /** Échéances repérées par l'analyse des documents (dates précises marquées comme échéance). */
 export async function listDeadlines(userId: string, from: Date, to: Date): Promise<Extract<AgendaItem, { kind: 'deadline' }>[]> {
   const rows = await db.select({ id: files.id, name: files.name, analysis: files.analysis })
-    .from(files).where(and(eq(files.userId, userId), eq(files.status, 'ready')));
+    .from(files).where(and(eq(files.userId, userId), isNull(files.deletedAt), eq(files.status, 'ready')));
 
   const fromDay = from.toISOString().slice(0, 10);
   const toDay = to.toISOString().slice(0, 10);

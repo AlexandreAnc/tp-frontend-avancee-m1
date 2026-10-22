@@ -4,6 +4,7 @@ useHead({ title: 'Maison · DashIA' });
 const route = useRoute();
 const { home, loading, busy, refresh, toggleRoom, dimRoom, allOff, scene, toggleLight, lightsOn } = useHome();
 const { data: connectorsData } = await useFetch('/api/connectors', { key: 'connectors' });
+const { ask } = useConfirm();
 const selectedRoomId = ref<string | null>(null);
 
 await refresh();
@@ -31,7 +32,7 @@ function onDim(event: Event) {
 }
 
 async function disconnect() {
-  if (!confirm('Déconnecter Philips Hue ?')) return;
+  if (!await ask({ title: 'Déconnecter Philips Hue ?', message: 'Les routines qui pilotent vos lampes ne fonctionneront plus.', confirm: 'Déconnecter', danger: true })) return;
   await $fetch('/api/connectors/hue', { method: 'DELETE' });
   await refresh();
 }

@@ -8,6 +8,7 @@ type Tag = ApiResponse<'/api/tags', 'get'>['tags'][number];
 
 const { data, refresh } = await useFetch('/api/tags', { key: 'tags' });
 const { data: routinesData } = await useFetch('/api/routines', { key: 'routines' });
+const { ask } = useConfirm();
 
 const platform = ref<'android' | 'iphone'>('android');
 const canWriteNfc = ref(false);
@@ -82,7 +83,7 @@ async function associate(tag: Tag, routine: string) {
 }
 
 async function revoke(tag: Tag) {
-  if (!confirm(`Désactiver le tag « ${tag.name} » ? Il ne lancera plus rien, même si son URL a été copiée.`)) return;
+  if (!await ask({ title: `Désactiver le tag « ${tag.name} » ?`, message: 'Il ne lancera plus rien, même si son URL a été copiée.', confirm: 'Désactiver', danger: true })) return;
   await $fetch(`/api/tags/${tag.id}`, { method: 'DELETE' });
   await refresh();
 }

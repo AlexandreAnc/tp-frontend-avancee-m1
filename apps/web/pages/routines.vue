@@ -6,6 +6,7 @@ import type { RoutineItem } from '~/components/routine/Card.vue';
 useHead({ title: 'Routines · DashIA' });
 
 const { data, refresh } = await useFetch('/api/routines', { key: 'routines' });
+const { ask } = useConfirm();
 const editing = ref<(Omit<RoutineInput, 'enabled'> & { id?: string }) | null>(null);
 const busy = ref<string | null>(null);
 const error = ref<string | null>(null);
@@ -56,7 +57,7 @@ async function run(routineId: string, name: string) {
 
 async function remove() {
   const id = editing.value?.id;
-  if (!id || !confirm('Supprimer cette routine ? Les tags associés ne lanceront plus rien.')) return;
+  if (!id || !await ask({ title: 'Supprimer cette routine ?', message: 'Les tags associés ne lanceront plus rien.', confirm: 'Supprimer', danger: true })) return;
   await $fetch(`/api/routines/${id}`, { method: 'DELETE' });
   editing.value = null;
   await refresh();

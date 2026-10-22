@@ -1,5 +1,12 @@
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 Mo par fichier
-export const MAX_STORAGE_BYTES_PER_USER = 500 * 1024 * 1024; // 500 Mo de stockage par compte
+export const MAX_STORAGE_BYTES_PER_USER = 500 * 1024 * 1024; // 500 Mo de stockage par compte (corbeille comprise)
+/** Durée de conservation dans la corbeille avant suppression définitive. */
+export const TRASH_RETENTION_DAYS = 30;
+/** Durées proposées pour un lien de partage, en heures. */
+export const SHARE_LINK_DURATIONS_HOURS = [1, 24, 24 * 7] as const;
+export type ShareLinkDuration = (typeof SHARE_LINK_DURATIONS_HOURS)[number];
+/** Taille maximale d'un téléchargement de dossier en .zip. */
+export const MAX_ZIP_BYTES = 200 * 1024 * 1024;
 export const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'text/plain',

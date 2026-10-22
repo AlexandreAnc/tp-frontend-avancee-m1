@@ -12,7 +12,11 @@ async function fetchSession() {
   }
 }
 
+/** Pages ouvertes sans compte : le lien de partage porte son propre jeton. */
+const PUBLIC_PREFIXES = ['/s/'];
+
 export default defineNuxtRouteMiddleware(async (to) => {
+  if (PUBLIC_PREFIXES.some((prefix) => to.path.startsWith(prefix))) return;
   const session = await fetchSession();
   const unreachable = useServerUnreachable();
   unreachable.value = session === undefined;

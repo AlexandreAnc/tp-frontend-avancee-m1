@@ -7,6 +7,8 @@ const LAST_ACTIVE_KEY = 'dashia-last-active';
 export function useAppLock() {
   const isLocked = useState('app-locked', () => false);
   const lockAfterMinutes = useState<number | null>('lock-after', () => null);
+  /** Un code de secours est défini : déverrouillage possible sans Face ID. */
+  const hasPin = useState('lock-has-pin', () => false);
 
   function touch() {
     try {
@@ -30,6 +32,7 @@ export function useAppLock() {
   return {
     isLocked,
     lockAfterMinutes,
+    hasPin,
     touch,
     evaluate,
     unlock: () => {

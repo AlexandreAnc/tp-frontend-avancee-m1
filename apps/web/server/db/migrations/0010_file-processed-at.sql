@@ -1,0 +1,1 @@
+ALTER TABLE "files" ADD COLUMN "processed_at" timestamp with time zone;

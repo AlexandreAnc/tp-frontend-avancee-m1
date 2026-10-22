@@ -6,7 +6,9 @@ import { expireActions } from '../services/actions';
 import { runDigests } from '../services/digest';
 import { fireReminder } from '../services/reminders';
 import { runScheduledRoutines } from '../services/routines';
+import { purgeExpiredShareLinks } from '../services/share';
 import { purgeOldTaskTokens } from '../services/task-tokens';
+import { purgeExpiredTrash } from '../services/trash';
 
 export default defineNitroPlugin((nitroApp) => {
   // Pas de file de tâches pendant `nuxt build` / `nuxt prepare`.
@@ -26,6 +28,11 @@ export default defineNitroPlugin((nitroApp) => {
     await boss.schedule(MAINTENANCE_QUEUES.routines, '* * * * *');
     await boss.work(MAINTENANCE_QUEUES.routines, async () => {
       await runScheduledRoutines();
+    });
+    await boss.schedule(MAINTENANCE_QUEUES.driveCleanup, '15 3 * * *');
+    await boss.work(MAINTENANCE_QUEUES.driveCleanup, async () => {
+      await purgeExpiredTrash();
+      await purgeExpiredShareLinks();
     });
     await boss.work<ReminderJobData>(REMINDER_QUEUE, async (jobs) => {
       for (const job of jobs) await fireReminder(job.data);

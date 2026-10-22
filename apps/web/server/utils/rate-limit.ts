@@ -41,3 +41,10 @@ export const uploadRateLimit = createRateLimiter({
   windowMs: 10 * 60_000,
   message: "Trop d'envois de fichiers. Réessayez dans quelques minutes.",
 });
+
+/** Pages et téléchargements publics des liens de partage, par adresse IP. */
+export const shareRateLimit = createRateLimiter({
+  limit: 60,
+  windowMs: 60_000,
+  message: 'Trop de requêtes. Réessayez dans une minute.',
+});
