@@ -1,0 +1,168 @@
+<script setup lang="ts">
+import type { RoutineInput } from '@app/shared';
+import type { ApiResponse } from '#shared/types/api';
+import type { RoutineItem } from '~/components/routine/Card.vue';
+
+useHead({ title: 'Routines · DashIA' });
+
+const { data, refresh } = await useFetch('/api/routines', { key: 'routines' });
+const editing = ref<(Omit<RoutineInput, 'enabled'> & { id?: string }) | null>(null);
+const busy = ref<string | null>(null);
+const error = ref<string | null>(null);
+const lastResult = ref<{ name: string; routineId: string; run: ApiResponse<'/api/routines/:id/run', 'post'>['run'] } | null>(null);
+
+const routines = computed(() => (data.value?.routines ?? []) as RoutineItem[]);
+const active = computed(() => routines.value.filter((routine) => routine.enabled).length);
+
+useEvents((event) => {
+  if (event.type === 'activity.created') void refresh();
+});
+
+function edit(routine: RoutineItem) {
+  editing.value = { id: routine.id, name: routine.name, icon: routine.icon, schedule: routine.schedule, steps: routine.steps };
+  lastResult.value = null;
+}
+
+function startFrom(template: (typeof ROUTINE_TEMPLATES)[number] | null) {
+  editing.value = template
+    ? { name: template.name, icon: template.icon, schedule: template.schedule, steps: template.steps }
+    : { name: '', icon: 'house', schedule: null, steps: [] };
+  lastResult.value = null;
+}
+
+async function toggle(routine: RoutineItem) {
+  error.value = null;
+  try {
+    await $fetch(`/api/routines/${routine.id}`, { method: 'PATCH', body: { enabled: !routine.enabled } });
+    await refresh();
+  } catch (caught) {
+    error.value = getErrorMessage(caught);
+  }
+}
+
+async function run(routineId: string, name: string) {
+  busy.value = routineId;
+  error.value = null;
+  try {
+    const { run: result } = await $fetch<ApiResponse<'/api/routines/:id/run', 'post'>>(`/api/routines/${routineId}/run`, { method: 'POST' });
+    lastResult.value = { name, routineId, run: result };
+    await refresh();
+  } catch (caught) {
+    error.value = getErrorMessage(caught);
+  } finally {
+    busy.value = null;
+  }
+}
+
+async function remove() {
+  const id = editing.value?.id;
+  if (!id || !confirm('Supprimer cette routine ? Les tags associés ne lanceront plus rien.')) return;
+  await $fetch(`/api/routines/${id}`, { method: 'DELETE' });
+  editing.value = null;
+  await refresh();
+}
+
+async function onSaved() {
+  editing.value = null;
+  await refresh();
+}
+</script>
+
+<template>
+  <div>
+    <PageHeader title="Routines" :subtitle="`${active} active${active > 1 ? 's' : ''} · ${routines.length - active} en pause`" back="/plus">
+      <template #actions>
+        <button class="btn btn-sm btn-primary" type="button" @click="startFrom(null)"><AppIcon name="plus" :size="12" />Nouvelle</button>
+      </template>
+    </PageHeader>
+
+    <main class="page routines-page">
+      <div class="stack col-main">
+        <p v-if="error" class="alert alert-error">{{ error }}</p>
+
+        <template v-if="editing">
+          <h2 class="section-label">{{ editing.id ? 'Modifier la routine' : 'Créer une routine' }}</h2>
+          <RoutineEditor :key="editing.id ?? editing.name" :initial="editing" @saved="onSaved" @cancel="editing = null" />
+          <button v-if="editing.id" class="text-btn danger" type="button" @click="remove">Supprimer la routine</button>
+        </template>
+
+        <RoutineRunResult
+          v-if="lastResult"
+          :name="lastResult.name"
+          :run="lastResult.run"
+          @retry="run(lastResult.routineId, lastResult.name)"
+          @edit="edit(routines.find((routine) => routine.id === lastResult?.routineId)!)"
+        />
+
+        <section class="section">
+          <h2 class="section-label">Mes routines</h2>
+          <RoutineCard
+            v-for="routine in routines"
+            :key="routine.id"
+            :routine="routine"
+            :busy="busy === routine.id"
+            @toggle="toggle(routine)"
+            @run="run(routine.id, routine.name)"
+            @edit="edit(routine)"
+          />
+          <div v-if="!routines.length" class="empty-state">
+            <span class="icon-tile tone-primary"><AppIcon name="repeat" :size="16" /></span>
+            <strong>Aucune routine</strong>
+            <p>Partez d'un modèle ci-dessous ou créez la vôtre.</p>
+          </div>
+        </section>
+      </div>
+
+      <section class="section col-side">
+        <h2 class="section-label">Modèles</h2>
+        <button v-for="template in ROUTINE_TEMPLATES" :key="template.name" type="button" class="card template" @click="startFrom(template)">
+          <span class="icon-tile" :class="ROUTINE_ICON_TONES[template.icon]"><AppIcon :name="template.icon" :size="14" /></span>
+          <span class="grow">
+            <strong>{{ template.name }}</strong>
+            <span class="small muted">{{ template.description }}{{ template.schedule ? ` · ${describeSchedule(template.schedule)}` : '' }}</span>
+          </span>
+          <AppIcon name="plus" :size="12" class="muted" />
+        </button>
+      </section>
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.routines-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.template {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template .grow {
+  display: flex;
+  flex-direction: column;
+}
+
+.template strong {
+  font-weight: 800;
+}
+
+.danger {
+  align-self: center;
+  color: var(--danger);
+}
+
+@media (min-width: 1024px) {
+  .routines-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
+}
+</style>
