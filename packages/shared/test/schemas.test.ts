@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALLOWED_MIME_TYPES,
+  agentStepSchema,
   agentToServerMessageSchema,
+  SPECIALIST_NAMES,
+  SPECIALISTS,
+  TOOL_NAMES,
   calendarEventPayloadSchema,
   EMBEDDING_DIMENSIONS,
   indexFileRequestSchema,
@@ -57,5 +61,19 @@ describe('protocole', () => {
     const chunk = (length: number) => ({ index: 0, content: 'c', embedding: Array.from({ length }, () => 0) });
     expect(indexFileRequestSchema.safeParse({ ...base, chunks: [chunk(EMBEDDING_DIMENSIONS)] }).success).toBe(true);
     expect(indexFileRequestSchema.safeParse({ ...base, chunks: [chunk(768)] }).success).toBe(false);
+  });
+});
+
+describe('spécialistes', () => {
+  it('chaque outil appartient à exactement un spécialiste', () => {
+    const owners = TOOL_NAMES.map((tool) => SPECIALIST_NAMES.filter((name) => (SPECIALISTS[name].tools as readonly string[]).includes(tool)));
+    expect(owners.every((list) => list.length === 1)).toBe(true);
+  });
+
+  it('valide les étapes de délégation et refuse un spécialiste inconnu', () => {
+    expect(agentStepSchema.safeParse({ kind: 'delegation', specialist: 'documents', task: 'x', callId: 'orchestrator.0.0', agent: 'orchestrator' }).success).toBe(true);
+    expect(agentStepSchema.safeParse({ kind: 'delegation', specialist: 'garage', task: 'x', callId: 'c' }).success).toBe(false);
+    // Étapes enregistrées avant le multi-agents : sans auteur.
+    expect(agentStepSchema.safeParse({ kind: 'tool_call', tool: 'list_files', input: {} }).success).toBe(true);
   });
 });

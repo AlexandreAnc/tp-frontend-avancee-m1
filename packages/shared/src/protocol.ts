@@ -6,7 +6,8 @@ import { TASK_TYPES } from './tasks';
  * Version du protocole serveur ↔ agent.
  * À incrémenter à chaque changement incompatible d'un message ci-dessous.
  */
-export const PROTOCOL_VERSION = 1;
+// v2 : étapes multi-agents (orchestrateur, délégations aux spécialistes).
+export const PROTOCOL_VERSION = 2;
 
 export const AGENT_WS_PATH = '/_agent';
 

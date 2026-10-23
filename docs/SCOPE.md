@@ -2,7 +2,7 @@
 
 Évolution de la PWA : une seule app installée qui connaît les documents, le planning et la maison de l'utilisateur, pilotable par la discussion, un tap sur un tag NFC ou un panel.
 
-## Avancement (22/10/2026)
+## Avancement (23/10/2026)
 
 | Phase | État |
 |---|---|
@@ -10,6 +10,7 @@
 | 2. Sécurité | ✅ Livrée : passkeys (connexion Face ID / empreinte), verrouillage de l'app, validation forte des actions sensibles |
 | 3. Maison | ✅ Code livré et testé contre un faux serveur Hue ; **à valider sur le pont réel** (nécessite une app développeur Philips, voir README) |
 | 4. Routines & NFC | ✅ Livrée : routines (heure, tag, manuel, agent), tags NFC (écriture Android, URL iPhone), écran au tap |
+| 5. Multi-agents | ✅ Livrée : orchestrateur + spécialistes Documents / Planning / Maison, délégations parallèles ou enchaînées, outils cloisonnés par spécialiste, timeline par agent |
 
 Ajouts issus de la maquette DashIA : formats images (vision) et Excel, catégories du drive, aperçu des documents, stats CPU/RAM/VRAM de l'agent, choix du modèle de chat (admin), test de connexion, export des données.
 
@@ -80,6 +81,27 @@ Exemples livrés comme modèles : « Je pars » (tout éteindre + récap du jour
 - **Validation forte** : les actions de niveau `sensitive` exigent une vérification passkey récente (moins de 5 min), contrôlée **côté serveur**.
 - Limite connue : un bouton de notification ne peut pas déclencher la biométrie → une action `sensitive` n'a pas de boutons Valider / Refuser dans la notification ; le clic ouvre la carte dans l'app.
 
+### 6. Système multi-agents
+
+L'agent n'est plus une seule boucle « modèle + 13 outils » : une équipe coordonnée.
+
+```
+                 ┌──────────────── Orchestrateur ────────────────┐
+ demande ──►     │ découpe, délègue, enchaîne, synthétise        │ ──► réponse
+                 └──┬───────────────────┬───────────────────┬────┘
+            ask_documents        ask_planning           ask_home      (en parallèle si indépendants)
+                    ▼                   ▼                   ▼
+             Documents            Planning             Maison
+       list/read/search/move   agenda, rappels,    lumières, scènes,
+                               événements          routines
+```
+
+- **Cloisonnement** : chaque spécialiste n'a que ses outils, contrôlé à l'exécution ; l'orchestrateur n'a aucun accès direct aux données.
+- **Consignes autonomes** : un spécialiste ne voit pas la conversation, seulement la consigne (moins de contexte, moins d'erreurs avec un modèle local).
+- **Parallèle / séquentiel** : « mes factures et mon planning » → deux spécialistes en même temps ; « rappelle-moi l'échéance de mon bail » → Documents trouve la date, puis Planning crée le rappel.
+- **Traçabilité** : chaque étape porte son auteur ; la timeline montre les délégations, les outils de chaque spécialiste et son compte rendu.
+- Les niveaux de risque ne changent pas : les actions restent exécutées par le serveur selon leur type.
+
 ## Niveaux de risque des actions
 
 | Niveau | Exécution | Exemples |
@@ -108,6 +130,8 @@ Exemples livrés comme modèles : « Je pars » (tout éteindre + récap du jour
    *Terminé quand* : « éteins le salon » éteint les lampes sans validation, même PC éteint (panel) ou PC allumé (agent).
 4. **Routines et NFC** : routines, déclencheurs (tag, heure, panel, agent), tags NFC (écriture Android, URL sur iPhone), journal d'activité.
    *Terminé quand* : taper le tag « Je pars » éteint les lampes et affiche le récap du jour sur les deux téléphones.
+5. **Multi-agents** : orchestrateur, spécialistes Documents / Planning / Maison, délégations parallèles et enchaînées, timeline par agent.
+   *Terminé quand* : « de quoi parle mon document X et qu'ai-je au planning cette semaine ? » lance deux spécialistes en parallèle, chacun avec ses seuls outils, et la timeline montre qui a fait quoi.
 
 ## Compatibilité
 

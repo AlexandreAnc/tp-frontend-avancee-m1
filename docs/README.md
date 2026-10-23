@@ -16,7 +16,7 @@ Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une ma
   - **50 Mo maximum par fichier**
   - **500 Mo de stockage par compte**, corbeille comprise (pas de limite sur le nombre de fichiers)
 - **Analyse automatique à l'upload** : type de document, résumé, infos clés (dates, montants, noms), suggestions d'actions.
-- **Chat agentique** : l'agent choisit lui-même ses outils (recherche sémantique, lecture de fichier, liste, recherche exacte) et affiche ses étapes en direct.
+- **Chat multi-agents** : un **orchestrateur** découpe la demande et la confie à des **spécialistes** (Documents, Planning, Maison), chacun limité à ses propres outils. Les sous-tâches indépendantes tournent en parallèle, les dépendantes s'enchaînent, puis l'orchestrateur rédige la réponse. La timeline affiche en direct qui fait quoi.
 - **Connecteurs** : Google Agenda pour commencer, architecture MCP pour en ajouter d'autres.
 - **Validation humaine** : les actions qui comptent passent par une confirmation (notification push avec boutons, ou carte dans l'app) ; les actions sans risque (lampes, rappels) sont directes. Détail des niveaux de risque et des évolutions (panel, rappels, Philips Hue, routines NFC, passkeys) dans [`SCOPE.md`](SCOPE.md) ; inventaire des écrans pour la maquette dans [`FONCTIONNALITES.md`](FONCTIONNALITES.md).
 - **PWA** : installable, historique consultable hors ligne, file d'attente quand l'agent est indisponible, notifications push.

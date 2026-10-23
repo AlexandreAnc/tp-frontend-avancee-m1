@@ -33,8 +33,8 @@ export const tools: { [N in ToolName]: AgentTool<N> } = {
 };
 
 /** Définitions au format attendu par Ollama, générées depuis les schémas Zod partagés. */
-export function toOllamaTools(): Tool[] {
-  return TOOL_NAMES.map((name) => {
+export function toOllamaTools(names: readonly ToolName[] = TOOL_NAMES): Tool[] {
+  return names.map((name) => {
     const { definition } = tools[name];
     return {
       type: 'function',
@@ -54,9 +54,12 @@ export function isToolName(name: string): name is ToolName {
 
 export type ToolCallResult = { ok: true; output: unknown } | { ok: false; error: string };
 
-/** Valide les arguments fournis par le modèle, exécute l'outil et valide sa sortie. */
-export async function runTool(name: string, args: unknown, context: ToolContext): Promise<ToolCallResult> {
-  if (!isToolName(name)) return { ok: false, error: `Outil inconnu : ${name}` };
+/**
+ * Valide les arguments fournis par le modèle, exécute l'outil et valide sa sortie.
+ * `allowed` : outils de l'agent appelant ; un spécialiste ne peut pas appeler l'outil d'un autre.
+ */
+export async function runTool(name: string, args: unknown, context: ToolContext, allowed: readonly ToolName[] = TOOL_NAMES): Promise<ToolCallResult> {
+  if (!isToolName(name) || !allowed.includes(name)) return { ok: false, error: `Outil inconnu : ${name}` };
   const tool = tools[name] as AgentTool;
 
   const input = tool.definition.input.safeParse(args);

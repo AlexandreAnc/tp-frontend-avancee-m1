@@ -54,7 +54,7 @@ function actionsFor(messageId: string): InlineActionInfo[] {
   return (steps.value[messageId] ?? []).flatMap(({ step }) => {
     if (step.kind !== 'tool_result' || step.error || !['create_calendar_event', 'create_reminder'].includes(step.tool)) return [];
     const output = step.output as InlineActionInfo['output'];
-    const call = (steps.value[messageId] ?? []).find((entry) => entry.step.kind === 'tool_call' && entry.step.tool === step.tool)?.step;
+    const call = (steps.value[messageId] ?? []).find((entry) => entry.step.kind === 'tool_call' && entry.step.tool === step.tool && entry.step.callId === step.callId)?.step;
     const input = call?.kind === 'tool_call' ? call.input as { title?: string; text?: string } : {};
     const label = input.title ?? input.text ?? '';
     return [{ output, summary: step.tool === 'create_reminder' ? `Rappel « ${label} »` : `Événement « ${label} »` }];

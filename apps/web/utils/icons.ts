@@ -1,6 +1,6 @@
 /**
  * Icônes de la maquette DashIA (fichiers SVG d'origine dans `public/icons/ui`), avec leurs proportions.
- * `star` et `star-outline` (favoris) n'existent pas dans la maquette : dessinés dans le même gabarit 16×16.
+ * `star`, `star-outline` (favoris) et `sitemap` (équipe d'agents) n'existent pas dans la maquette : dessinés dans le même gabarit 16×16.
  */
 export const ICONS = {
   'android': [15.75, 14.0],
@@ -86,6 +86,7 @@ export const ICONS = {
   'server': [10.0, 10.0],
   'shield': [16.0, 16.0],
   'signal': [15.0, 12.0],
+  'sitemap': [16.0, 16.0],
   'sort': [15.75, 14.0],
   'spinner': [12.0, 12.0],
   'star': [16.0, 16.0],

@@ -104,8 +104,14 @@ export const ALLOWED_MIME_TYPES = [
 - **Heartbeat** régulier ; sans heartbeat, le serveur considère l'agent hors ligne et remet ses tâches en file.
 - **Modèle d'embeddings unique** : le nom du modèle est stocké avec chaque chunk. Le serveur n'envoie les tâches d'indexation et de recherche qu'aux agents qui annoncent ce modèle. Le modèle de chat, lui, peut varier.
 - **Outils** : un fichier par outil dans `agent/src/tools`, avec description, schéma Zod d'entrée et de sortie. Les définitions exposées au modèle viennent de `packages/shared`.
-- Chaque étape (raisonnement, appel d'outil, résultat) est renvoyée au serveur pour être affichée dans la timeline et stockée dans `agent_steps`.
-- Limiter le nombre d'itérations de la boucle agentique pour éviter les boucles infinies.
+- **Multi-agents** (`agent/src/loop`) : pour le chat, un **orchestrateur** délègue à des **spécialistes** définis dans `packages/shared/src/specialists.ts`.
+  - L'orchestrateur n'a **que** des outils de délégation (`ask_documents`, `ask_planning`, `ask_home`) : il ne touche jamais aux données lui-même.
+  - Chaque outil appartient à **exactement un** spécialiste (vérifié par un test). Un spécialiste ne peut appeler que ses outils : c'est contrôlé à l'exécution (`runTool(…, allowed)`), pas seulement par la liste montrée au modèle.
+  - Un spécialiste ne voit pas la conversation, seulement la consigne de l'orchestrateur : elle doit se suffire à elle-même.
+  - Les appels d'un même tour s'exécutent en parallèle ; une erreur fatale (token refusé…) n'est propagée qu'une fois les autres appels terminés.
+  - Un nouvel outil = l'ajouter à un spécialiste ; un nouveau domaine = un nouveau spécialiste (prompt dans `loop/prompts.ts`).
+- Chaque étape (raisonnement, délégation, appel d'outil, résultat) est renvoyée au serveur pour être affichée dans la timeline et stockée dans `agent_steps`. Elle porte son auteur (`agent`), et pour un spécialiste la délégation à laquelle elle appartient (`parentId`) ; appels et résultats sont reliés par `callId`.
+- Limiter le nombre d'itérations : `MAX_ORCHESTRATOR_ITERATIONS` tours de délégation, `MAX_AGENT_ITERATIONS` appels au modèle par spécialiste, puis réponse forcée sans outil.
 
 ## PWA
 

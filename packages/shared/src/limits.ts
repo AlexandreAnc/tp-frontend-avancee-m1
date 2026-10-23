@@ -48,8 +48,11 @@ export function formatBytes(bytes: number): string {
 /** Durée de vie d'une action en attente de validation. Expirée = annulée. */
 export const PENDING_ACTION_TTL_MS = 15 * 60 * 1000;
 
-/** Nombre maximal d'itérations de la boucle agentique pour une réponse. */
+/** Nombre maximal d'itérations de la boucle d'un spécialiste (appels au modèle). */
 export const MAX_AGENT_ITERATIONS = 8;
+
+/** Nombre maximal de tours de délégation de l'orchestrateur avant sa réponse finale. */
+export const MAX_ORCHESTRATOR_ITERATIONS = 4;
 
 /** Longueur maximale d'un message utilisateur dans le chat. */
 export const MAX_CHAT_MESSAGE_LENGTH = 4000;

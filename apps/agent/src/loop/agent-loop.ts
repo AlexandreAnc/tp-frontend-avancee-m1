@@ -1,72 +1,81 @@
-import { MAX_AGENT_ITERATIONS, type AgentStep } from '@app/shared';
-import type { Message } from 'ollama';
+import type { AgentRole, AgentStep } from '@app/shared';
+import type { Message, Tool } from 'ollama';
+import type { LlmClient } from '../llm/ollama';
 import { TaskError } from '../tasks/errors';
-import { runTool, toOllamaTools, type ToolCallResult } from '../tools';
-import type { ToolContext } from '../tools/types';
-import { buildSystemPrompt, FORCE_ANSWER_PROMPT } from './prompts';
+import { FORCE_ANSWER_PROMPT } from './prompts';
 
-export interface AgentLoopInput {
-  history: { role: 'user' | 'assistant'; content: string }[];
-  context: ToolContext;
-  emitStep: (step: AgentStep) => Promise<void>;
-  signal: AbortSignal;
-  now?: Date;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/** Étape sans son auteur : la boucle ajoute `agent` et `parentId`. */
+export type LocalStep = DistributiveOmit<AgentStep, 'agent' | 'parentId'>;
+
+export interface ToolCall {
+  name: string;
+  args: unknown;
+  /** Identifiant unique dans la tâche, pour relier l'appel, son résultat et les étapes d'une délégation. */
+  callId: string;
 }
 
-/** Taille maximale d'un résultat d'outil renvoyé au modèle (le contexte n'est pas infini). */
+export interface LoopInput {
+  role: AgentRole;
+  /** Délégation dans laquelle travaille ce spécialiste (absent pour l'orchestrateur). */
+  parentId?: string;
+  system: string;
+  history: { role: 'user' | 'assistant'; content: string }[];
+  tools: Tool[];
+  maxIterations: number;
+  llm: LlmClient;
+  emitStep: (step: AgentStep) => Promise<void>;
+  signal: AbortSignal;
+  /** Exécute un appel et renvoie le texte rendu au modèle. Publie ses propres étapes via `emit`. */
+  runCall: (call: ToolCall, emit: (step: LocalStep) => Promise<void>) => Promise<string>;
+}
+
+/** Taille maximale d'un résultat renvoyé au modèle (le contexte n'est pas infini). */
 const MAX_TOOL_RESULT_CHARS = 12_000;
 
-function serializeForModel(result: ToolCallResult): string {
-  const text = JSON.stringify(result.ok ? result.output : { error: result.error });
+export function serializeForModel(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
   return text.length > MAX_TOOL_RESULT_CHARS ? `${text.slice(0, MAX_TOOL_RESULT_CHARS)}… [tronqué]` : text;
 }
 
-async function callTool(name: string, args: unknown, context: ToolContext): Promise<ToolCallResult> {
-  try {
-    return await runTool(name, args, context);
-  } catch (error) {
-    // Les erreurs qui invalident la tâche (serveur injoignable, token refusé) remontent ;
-    // les autres sont renvoyées au modèle pour qu'il corrige son appel.
-    if (error instanceof TaskError && !error.fatal) return { ok: false, error: error.message };
-    throw error;
-  }
+/** Une erreur non fatale est rendue au modèle pour qu'il corrige son appel ; les autres invalident la tâche. */
+export function isRecoverable(error: unknown): error is TaskError {
+  return error instanceof TaskError && !error.fatal;
 }
 
 /**
- * Boucle agentique : le modèle choisit ses outils jusqu'à produire une réponse,
- * dans la limite de `MAX_AGENT_ITERATIONS` appels au modèle.
+ * Boucle agentique commune à l'orchestrateur et aux spécialistes : le modèle appelle des outils
+ * jusqu'à produire une réponse, dans la limite de `maxIterations` appels au modèle.
+ * Les appels d'un même tour s'exécutent en parallèle.
  */
-export async function runAgentLoop({ history, context, emitStep, signal, now = new Date() }: AgentLoopInput): Promise<string> {
-  const { llm } = context;
-  const messages: Message[] = [
-    { role: 'system', content: buildSystemPrompt(now, context.timezone) },
-    ...history,
-  ];
-  const ollamaTools = toOllamaTools();
+export async function runLoop(input: LoopInput): Promise<string> {
+  const { llm, signal, role, parentId } = input;
+  const emit = (step: LocalStep) => input.emitStep({ ...step, agent: role, ...(parentId ? { parentId } : {}) } as AgentStep);
+  const messages: Message[] = [{ role: 'system', content: input.system }, ...input.history];
+  const prefix = parentId ?? role;
 
-  for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration++) {
+  for (let iteration = 0; iteration < input.maxIterations; iteration++) {
     signal.throwIfAborted();
-    const { message } = await llm.chat({ messages, tools: ollamaTools, think: llm.supportsThinking });
+    const { message } = await llm.chat({ messages, tools: input.tools, think: llm.supportsThinking });
 
-    if (message.thinking?.trim()) {
-      await emitStep({ kind: 'thinking', text: message.thinking.trim() });
-    }
+    if (message.thinking?.trim()) await emit({ kind: 'thinking', text: message.thinking.trim() });
     messages.push(message);
 
-    const calls = message.tool_calls ?? [];
-    if (calls.length === 0) {
-      return message.content.trim();
-    }
+    const calls = (message.tool_calls ?? []).map((call, index): ToolCall => ({
+      name: call.function.name,
+      args: call.function.arguments,
+      callId: `${prefix}.${iteration}.${index}`,
+    }));
+    if (calls.length === 0) return message.content.trim();
 
-    for (const call of calls) {
-      const { name, arguments: args } = call.function;
-      await emitStep({ kind: 'tool_call', tool: name, input: args });
-      const result = await callTool(name, args, context);
-      await emitStep(result.ok
-        ? { kind: 'tool_result', tool: name, output: result.output }
-        : { kind: 'tool_result', tool: name, error: result.error });
-      messages.push({ role: 'tool', tool_name: name, content: serializeForModel(result) });
-    }
+    // Tous les appels vont au bout avant de propager une erreur fatale : pas d'étape orpheline.
+    const settled = await Promise.allSettled(calls.map((call) => input.runCall(call, emit)));
+    const fatal = settled.find((result) => result.status === 'rejected');
+    if (fatal) throw fatal.reason;
+    settled.forEach((result, index) => {
+      messages.push({ role: 'tool', tool_name: calls[index]!.name, content: (result as PromiseFulfilledResult<string>).value });
+    });
   }
 
   signal.throwIfAborted();
