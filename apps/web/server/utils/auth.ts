@@ -8,6 +8,8 @@ function createAuth() {
   const env = getEnv();
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
+    // Dev : connexion par e-mail depuis un tunnel cloudflared (les passkeys restent liées à BETTER_AUTH_URL).
+    trustedOrigins: process.env.NODE_ENV === 'production' ? [] : ['https://*.trycloudflare.com'],
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, {
       provider: 'pg',

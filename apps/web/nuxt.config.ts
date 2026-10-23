@@ -11,6 +11,8 @@ export default defineNuxtConfig({
   css: ['@fontsource-variable/manrope', '~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+    // Dev : accepte les tunnels `cloudflared tunnel --url` (sous-domaine aléatoire à chaque lancement).
+    server: { allowedHosts: ['.trycloudflare.com'] },
   },
 
   app: {
