@@ -22,6 +22,8 @@ FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000
 COPY --from=build /repo/apps/web/.output ./.output
+# Point de montage du stockage : un volume nommé neuf hérite de ce propriétaire (sinon root, et l'upload échoue).
+RUN mkdir -p /data/files && chown node:node /data/files
 USER node
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
