@@ -95,23 +95,23 @@ const ICON_CHOICES: RoutineIcon[] = ['house', 'door-exit', 'bed', 'laptop', 'car
   <div>
     <PageHeader title="Tags NFC" :subtitle="`${tags.length} tag${tags.length > 1 ? 's' : ''} · ${scans} scan${scans > 1 ? 's' : ''}`" back="/plus" />
 
-    <main class="page tags-page">
-      <section class="section">
+    <main class="page lg:grid lg:grid-cols-2 lg:items-start">
+      <section class="flex flex-col gap-3">
         <h2 class="section-label">1 · Mes tags</h2>
-        <div v-if="tags.length" class="card card-flush">
-          <div v-for="tag in tags" :key="tag.id" class="tag-row">
+        <div v-if="tags.length" class="card card-flush [&>*+*]:border-t">
+          <div v-for="tag in tags" :key="tag.id" class="flex items-center gap-3 p-4">
             <span class="icon-tile round" :class="ROUTINE_ICON_TONES[tag.icon]"><AppIcon :name="tag.icon" :size="14" /></span>
-            <span class="grow">
-              <strong>{{ tag.name }}</strong>
-              <span class="small muted ellipsis">{{ tag.routineName ? `→ ${tag.routineName} · ${lastUse(tag)}` : 'Aucune routine associée' }}</span>
+            <span class="flex min-w-0 flex-1 flex-col">
+              <strong class="font-extrabold">{{ tag.name }}</strong>
+              <span class="truncate text-xs text-muted">{{ tag.routineName ? `→ ${tag.routineName} · ${lastUse(tag)}` : 'Aucune routine associée' }}</span>
             </span>
-            <select v-if="associating === tag.id" class="input mini" :value="tag.routineId ?? ''" aria-label="Routine du tag" @change="associate(tag, ($event.target as HTMLSelectElement).value)">
+            <select v-if="associating === tag.id" class="input min-h-8 w-auto text-[12px]" :value="tag.routineId ?? ''" aria-label="Routine du tag" @change="associate(tag, ($event.target as HTMLSelectElement).value)">
               <option value="">Aucune</option>
               <option v-for="routine in routines" :key="routine.id" :value="routine.id">{{ routine.name }}</option>
             </select>
             <button v-else-if="!tag.routineId" class="text-btn" type="button" @click="associating = tag.id">Associer</button>
-            <button v-else class="tiny muted strong count" type="button" :title="'Changer la routine'" @click="associating = tag.id">{{ tag.scanCount }}×</button>
-            <button class="icon-btn small-btn" type="button" :aria-label="`Désactiver ${tag.name}`" @click="revoke(tag)"><AppIcon name="trash" :size="11" /></button>
+            <button v-else class="cursor-pointer px-1.5 py-px text-2xs font-extrabold text-muted" type="button" :title="'Changer la routine'" @click="associating = tag.id">{{ tag.scanCount }}×</button>
+            <button class="icon-btn size-7" type="button" :aria-label="`Désactiver ${tag.name}`" @click="revoke(tag)"><AppIcon name="trash" :size="11" /></button>
           </div>
         </div>
         <div v-else class="empty-state">
@@ -121,21 +121,21 @@ const ICON_CHOICES: RoutineIcon[] = ['house', 'door-exit', 'bed', 'laptop', 'car
         </div>
       </section>
 
-      <section class="section">
+      <section class="flex flex-col gap-3">
         <h2 class="section-label">2 · Ajouter un tag</h2>
         <div class="segmented">
           <button type="button" :class="{ active: platform === 'android' }" @click="platform = 'android'"><AppIcon name="android" :size="14" />Android</button>
           <button type="button" :class="{ active: platform === 'iphone' }" @click="platform = 'iphone'"><AppIcon name="apple" :size="14" />iPhone</button>
         </div>
 
-        <div class="card add">
+        <div class="card flex flex-col items-stretch gap-3.5 rounded-xl p-5">
           <template v-if="!created">
             <label class="field">
               <span class="field-label">Nom du tag</span>
               <input v-model="name" class="input" maxlength="60" placeholder="Porte d'entrée" required>
             </label>
-            <div class="icon-row" role="radiogroup" aria-label="Icône du tag">
-              <button v-for="item in ICON_CHOICES" :key="item" type="button" class="icon-tile round" :class="[ROUTINE_ICON_TONES[item], { picked: icon === item }]" role="radio" :aria-checked="icon === item" :aria-label="item" @click="icon = item">
+            <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Icône du tag">
+              <button v-for="item in ICON_CHOICES" :key="item" type="button" class="icon-tile round cursor-pointer border-2" :class="[ROUTINE_ICON_TONES[item], icon === item ? 'border-ink' : 'border-transparent']" role="radio" :aria-checked="icon === item" :aria-label="item" @click="icon = item">
                 <AppIcon :name="item" :size="13" />
               </button>
             </div>
@@ -154,12 +154,12 @@ const ICON_CHOICES: RoutineIcon[] = ['house', 'door-exit', 'bed', 'laptop', 'car
 
           <!-- Android : écriture -->
           <template v-else-if="platform === 'android' && canWriteNfc">
-            <div class="rings" aria-hidden="true">
-              <span class="ring r1" /><span class="ring r2" /><span class="core"><AppIcon name="mobile" :size="34" /></span>
+            <div class="relative mx-auto size-40" aria-hidden="true">
+              <span class="ring-pulse absolute inset-0 rounded-full border-2 border-emerald-deep/20" /><span class="absolute inset-5 rounded-full border-2 border-emerald-deep/30" /><span class="absolute inset-10 flex items-center justify-center rounded-full bg-primary-soft text-primary-strong"><AppIcon name="mobile" :size="34" /></span>
             </div>
-            <h3>{{ writing === 'done' ? 'Tag écrit ✓' : 'Approchez le tag du dos du téléphone' }}</h3>
-            <p class="small muted center">DashIA écrit le tag directement — aucune autre app nécessaire.</p>
-            <p class="status small strong">
+            <h3 class="text-center text-base">{{ writing === 'done' ? 'Tag écrit ✓' : 'Approchez le tag du dos du téléphone' }}</h3>
+            <p class="text-center text-xs text-muted">DashIA écrit le tag directement — aucune autre app nécessaire.</p>
+            <p class="flex items-center justify-center gap-2 rounded-md bg-surface-muted px-3 py-2.5 text-xs font-extrabold text-muted">
               <template v-if="writing === 'waiting'"><span class="spinner" /> En attente du tag…</template>
               <template v-else-if="writing === 'done'"><AppIcon name="circle-check" :size="12" /> « {{ created.name }} » est prêt.</template>
               <template v-else-if="writing === 'error'"><button class="text-btn" type="button" @click="writeTag(created)">Réessayer l'écriture</button></template>
@@ -169,10 +169,10 @@ const ICON_CHOICES: RoutineIcon[] = ['house', 'door-exit', 'bed', 'laptop', 'car
 
           <!-- iPhone : URL à copier -->
           <template v-else>
-            <h3>Écrivez cette adresse sur le tag</h3>
-            <code class="url">{{ tagUrl(created) }}</code>
+            <h3 class="text-center text-base">Écrivez cette adresse sur le tag</h3>
+            <code class="block p-3 break-all select-all">{{ tagUrl(created) }}</code>
             <button class="btn btn-ink btn-block" type="button" @click="copy(created)"><AppIcon name="file-export" :size="12" />{{ copied ? 'Copiée ✓' : 'Copier l’adresse' }}</button>
-            <ol class="tuto small">
+            <ol class="flex flex-col gap-1.5 text-xs text-muted">
               <li><strong>1.</strong> Installez une app d'écriture NFC (ex. « NFC Tools »).</li>
               <li><strong>2.</strong> Choisissez « Écrire » → « URL » et collez l'adresse.</li>
               <li><strong>3.</strong> Approchez le tag du haut de l'iPhone. Ensuite, un simple tap ouvre DashIA.</li>
@@ -187,157 +187,15 @@ const ICON_CHOICES: RoutineIcon[] = ['house', 'door-exit', 'bed', 'laptop', 'car
 </template>
 
 <style scoped>
-.tags-page {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+/* Halo qui pulse autour du téléphone pendant l'écriture du tag. */
+.ring-pulse {
+  animation: ring-pulse 2s ease-out infinite;
 }
 
-.tag-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-}
-
-.tag-row + .tag-row {
-  border-top: 1px solid var(--border);
-}
-
-.tag-row .grow {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tag-row strong {
-  font-weight: 800;
-}
-
-.count {
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-.input.mini {
-  width: auto;
-  min-height: 32px;
-  font-size: 12px;
-}
-
-.small-btn {
-  width: 28px;
-  height: 28px;
-}
-
-.add {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 14px;
-  padding: 20px;
-  border-radius: var(--radius-xl);
-}
-
-.add h3 {
-  font-size: 16px;
-  line-height: 24px;
-  text-align: center;
-}
-
-.icon-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.icon-row .icon-tile {
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.icon-row .picked {
-  border-color: var(--ink);
-}
-
-.rings {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto;
-}
-
-.ring,
-.core {
-  position: absolute;
-  border-radius: 50%;
-}
-
-.r1 {
-  inset: 0;
-  border: 2px solid rgb(5 150 105 / 0.2);
-  animation: pulse 2s ease-out infinite;
-}
-
-.r2 {
-  inset: 20px;
-  border: 2px solid rgb(5 150 105 / 0.3);
-}
-
-.core {
-  inset: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--primary-soft);
-  color: var(--primary-strong);
-}
-
-@keyframes pulse {
+@keyframes ring-pulse {
   50% {
     transform: scale(1.05);
     opacity: 0.6;
-  }
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-  color: var(--text-muted);
-}
-
-.center {
-  text-align: center;
-}
-
-.url {
-  display: block;
-  padding: 12px;
-  word-break: break-all;
-  user-select: all;
-}
-
-.tuto {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--text-muted);
-}
-
-@media (min-width: 1024px) {
-  .tags-page {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
   }
 }
 </style>

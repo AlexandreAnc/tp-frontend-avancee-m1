@@ -5,20 +5,11 @@ const initials = computed(() => props.name.split(/\s+/).filter(Boolean).slice(0,
 </script>
 
 <template>
-  <span class="avatar" :style="{ width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.38)}px` }" aria-hidden="true">
+  <span
+    class="inline-flex shrink-0 items-center justify-center rounded-full bg-linear-135/srgb from-primary-soft to-info-soft font-extrabold text-primary-strong"
+    :style="{ width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.38)}px` }"
+    aria-hidden="true"
+  >
     {{ initials }}
   </span>
 </template>
-
-<style scoped>
-.avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-soft), var(--info-soft));
-  color: var(--primary-strong);
-  font-weight: 800;
-}
-</style>

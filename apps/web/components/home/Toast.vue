@@ -9,47 +9,9 @@ watch(toast, (value) => {
 </script>
 
 <template>
-  <div v-if="toast" class="toast" :class="{ error: toast.error }" role="status">
+  <div v-if="toast" class="fixed right-4 bottom-[calc(var(--nav-height)+16px+env(safe-area-inset-bottom))] left-4 z-30 mx-auto flex max-w-[480px] items-center gap-2.5 rounded-lg px-4 py-3 text-[13px] font-bold text-white shadow-dialog lg:bottom-6 lg:left-[calc(var(--sidebar-width)+16px)]" :class="toast.error ? 'bg-danger' : 'bg-night'" role="status">
     <AppIcon :name="toast.error ? 'circle-exclamation' : 'lightbulb'" :size="14" />
-    <span class="grow">{{ toast.text }}</span>
-    <button v-if="toast.activityId" class="text-btn undo" type="button" @click="undo">Annuler</button>
+    <span class="min-w-0 flex-1">{{ toast.text }}</span>
+    <button v-if="toast.activityId" class="text-btn text-[13px] text-emerald-light" type="button" @click="undo">Annuler</button>
   </div>
 </template>
-
-<style scoped>
-.toast {
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 12px 16px;
-  border-radius: var(--radius-lg);
-  background: #1c1f23;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
-}
-
-.toast.error {
-  background: var(--danger);
-}
-
-.undo {
-  color: #34d399;
-  font-size: 13px;
-}
-
-@media (min-width: 1024px) {
-  .toast {
-    bottom: 24px;
-    left: calc(var(--sidebar-width) + 16px);
-  }
-}
-</style>

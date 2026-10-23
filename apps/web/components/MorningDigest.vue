@@ -46,114 +46,19 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="digest">
-    <span class="glow" aria-hidden="true" />
-    <header class="row">
-      <span class="sun"><AppIcon name="sun" :size="14" /></span>
-      <div class="grow">
+  <section class="relative flex flex-col gap-3.5 overflow-hidden rounded-lg bg-night p-4 text-white">
+    <span class="absolute -top-[60px] -right-[60px] size-[200px] rounded-full bg-emerald/25 blur-[40px]" aria-hidden="true" />
+    <header class="flex items-center gap-2">
+      <span class="inline-flex size-8 items-center justify-center rounded-sm bg-amber/20 text-amber"><AppIcon name="sun" :size="14" /></span>
+      <div class="min-w-0 flex-1">
         <h2>Résumé du matin</h2>
-        <p class="tiny sub">Calculé par votre agent à partir du planning</p>
+        <p class="text-2xs text-white/60">Calculé par votre agent à partir du planning</p>
       </div>
-      <button class="listen" type="button" @click="listen"><AppIcon :name="speaking ? 'xmark' : 'play'" :size="10" />{{ speaking ? 'Arrêter' : 'Écouter' }}</button>
+      <button class="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white" type="button" @click="listen"><AppIcon :name="speaking ? 'xmark' : 'play'" :size="10" />{{ speaking ? 'Arrêter' : 'Écouter' }}</button>
     </header>
-    <ul>
+    <ul class="flex flex-col gap-2">
       <!-- eslint-disable-next-line vue/no-v-html -- texte construit localement puis échappé -->
-      <li v-for="bullet in bullets" :key="bullet.text" :class="bullet.tone" v-html="renderMarkdown(bullet.text)" />
+      <li v-for="bullet in bullets" :key="bullet.text" class="relative pl-3.5 text-[13px] leading-5 text-white/85 before:absolute before:top-[7px] before:left-0 before:size-1.5 before:rounded-full [&_p]:m-0 [&_strong]:text-white" :class="bullet.tone === 'alert' ? 'before:bg-rose' : 'before:bg-emerald'" v-html="renderMarkdown(bullet.text)" />
     </ul>
   </section>
 </template>
-
-<style scoped>
-.digest {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px;
-  border-radius: var(--radius-lg);
-  background: #1c1f23;
-  color: #fff;
-}
-
-.glow {
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: rgb(16 185 129 / 0.25);
-  filter: blur(40px);
-}
-
-.sun {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  background: rgb(251 191 36 / 0.2);
-  color: var(--amber);
-}
-
-.sub {
-  color: rgb(255 255 255 / 0.6);
-}
-
-.listen {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 0.1);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-li {
-  position: relative;
-  padding-left: 14px;
-  font-size: 13px;
-  line-height: 20px;
-  color: rgb(255 255 255 / 0.85);
-}
-
-li::before {
-  content: '';
-  position: absolute;
-  top: 7px;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;
-}
-
-li.alert::before {
-  background: #e11d48;
-}
-
-li :deep(p) {
-  margin: 0;
-}
-
-li :deep(strong) {
-  color: #fff;
-}
-</style>

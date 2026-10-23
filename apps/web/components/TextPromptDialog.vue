@@ -38,8 +38,8 @@ defineExpose({ open, close: () => dialog.value?.close(), setError: (message: str
 </script>
 
 <template>
-  <dialog ref="dialog" class="prompt" @click.self="dialog?.close()">
-    <form class="stack" @submit.prevent="submit">
+  <dialog ref="dialog" class="m-auto w-[min(420px,calc(100%-24px))] rounded-xl border bg-surface p-5 text-text backdrop:bg-night/45" @click.self="dialog?.close()">
+    <form class="flex flex-col gap-3 *:min-w-0" @submit.prevent="submit">
       <h2>{{ title }}</h2>
       <label class="field">
         <span class="field-label">{{ label }}</span>
@@ -55,31 +55,10 @@ defineExpose({ open, close: () => dialog.value?.close(), setError: (message: str
         >
       </label>
       <p v-if="error" class="alert alert-error">{{ error }}</p>
-      <div class="buttons">
+      <div class="grid grid-cols-[1fr_1fr] gap-2">
         <button class="btn" type="button" @click="dialog?.close()">Annuler</button>
         <button class="btn btn-ink" type="submit" :disabled="!valid">{{ confirmLabel }}</button>
       </div>
     </form>
   </dialog>
 </template>
-
-<style scoped>
-.prompt {
-  width: min(420px, calc(100% - 24px));
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.prompt::backdrop {
-  background: rgb(28 31 35 / 0.45);
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-</style>

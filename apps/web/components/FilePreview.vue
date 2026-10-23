@@ -74,33 +74,39 @@ onMounted(() => {
 </script>
 
 <template>
-  <dialog ref="dialog" class="preview" aria-labelledby="preview-title" @close="emit('close')" @click.self="dialog?.close()">
+  <dialog
+    ref="dialog"
+    class="m-auto h-[min(88dvh,1100px)] max-h-none w-[min(960px,calc(100%_-_32px))] max-w-none overflow-hidden rounded-xl border bg-surface p-0 text-text backdrop:bg-night/60 open:flex open:flex-col max-[640px]:h-dvh max-[640px]:w-full max-[640px]:rounded-none max-[640px]:border-0"
+    aria-labelledby="preview-title"
+    @close="emit('close')"
+    @click.self="dialog?.close()"
+  >
     <template v-if="file">
-      <header class="head">
+      <header class="flex items-center gap-2.5 border-b px-3.5 py-3 max-[640px]:pt-[max(12px,env(safe-area-inset-top))]">
         <FileTypeIcon :mime-type="file.mimeType" :size="36" />
-        <div class="grow">
-          <h2 id="preview-title" class="ellipsis">{{ file.name }}</h2>
-          <p class="tiny muted">{{ formatBytes(file.sizeBytes) }}{{ file.analysis ? ` · ${file.analysis.documentType}` : '' }}</p>
+        <div class="min-w-0 flex-1">
+          <h2 id="preview-title" class="truncate text-[15px]">{{ file.name }}</h2>
+          <p class="text-2xs text-muted">{{ formatBytes(file.sizeBytes) }}{{ file.analysis ? ` · ${file.analysis.documentType}` : '' }}</p>
         </div>
         <a class="icon-btn" :href="`${contentUrl}?download=1`" :aria-label="`Télécharger ${file.name}`" download><AppIcon name="arrow-up-from-bracket" :size="14" /></a>
         <a v-if="mode === 'pdf' || mode === 'image'" class="icon-btn" :href="contentUrl" target="_blank" rel="noopener" aria-label="Ouvrir dans un nouvel onglet"><AppIcon name="external-link" :size="14" /></a>
         <button class="icon-btn" type="button" aria-label="Fermer l'aperçu" @click="dialog?.close()"><AppIcon name="xmark" :size="14" /></button>
       </header>
 
-      <div class="body" :class="mode">
-        <iframe v-if="mode === 'pdf'" :src="contentUrl" :title="`Aperçu de ${file.name}`" />
-        <img v-else-if="mode === 'image'" :src="contentUrl" :alt="file.analysis?.summary ?? file.name" @error="imageFailed = true">
+      <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-auto" :class="mode === 'pdf' || mode === 'image' ? 'bg-surface-muted p-0' : 'p-4'">
+        <iframe v-if="mode === 'pdf'" class="w-full flex-1 border-0" :src="contentUrl" :title="`Aperçu de ${file.name}`" />
+        <img v-else-if="mode === 'image'" class="size-full object-contain" :src="contentUrl" :alt="file.analysis?.summary ?? file.name" @error="imageFailed = true">
         <template v-else>
           <p v-if="mode === 'extracted'" class="alert alert-info">
             <AppIcon name="microchip" :size="14" />
             {{ file.mimeType.startsWith('image/') ? 'Ce navigateur n’affiche pas ce format : voici la transcription faite par votre agent.' : 'Aperçu du texte extrait par votre agent. Téléchargez le fichier pour la mise en page d’origine.' }}
           </p>
-          <p v-if="loading && text === null" class="small muted"><span class="spinner" /> Chargement…</p>
+          <p v-if="loading && text === null" class="text-xs text-muted"><span class="spinner" /> Chargement…</p>
           <p v-else-if="error" class="alert alert-error">{{ error }}</p>
-          <p v-else-if="text === ''" class="empty-state small">Aucun texte disponible{{ file.status !== 'ready' ? ' : le document n’est pas encore analysé.' : '.' }}</p>
+          <p v-else-if="text === ''" class="empty-state text-xs">Aucun texte disponible{{ file.status !== 'ready' ? ' : le document n’est pas encore analysé.' : '.' }}</p>
           <!-- eslint-disable-next-line vue/no-v-html -- Markdown échappé par renderMarkdown -->
-          <article v-else-if="mode === 'markdown'" class="doc prose" v-html="html" />
-          <pre v-else-if="text !== null" class="doc">{{ text }}</pre>
+          <article v-else-if="mode === 'markdown'" class="prose m-0 rounded-md bg-surface-muted p-4 text-[13px] leading-[21px] [word-break:break-word] whitespace-pre-wrap" v-html="html" />
+          <pre v-else-if="text !== null" class="m-0 rounded-md bg-surface-muted p-4 [font-family:inherit] text-[13px] leading-[21px] [word-break:break-word] whitespace-pre-wrap">{{ text }}</pre>
           <button v-if="mode === 'extracted' && text !== null && text.length < totalLength" class="btn btn-block" type="button" :disabled="loading" @click="loadText(true)">
             Afficher la suite ({{ Math.round((text.length / totalLength) * 100) }} %)
           </button>
@@ -111,98 +117,19 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.preview {
-  width: min(960px, calc(100% - 32px));
-  height: min(88dvh, 1100px);
-  max-width: none;
-  max-height: none;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-  overflow: hidden;
-}
-
-.preview[open] {
-  display: flex;
-  flex-direction: column;
-}
-
-.preview::backdrop {
-  background: rgb(28 31 35 / 0.6);
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.head h2 {
-  font-size: 15px;
-}
-
-.head .grow {
-  min-width: 0;
-}
-
-.body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.body.pdf,
-.body.image {
-  padding: 0;
-  background: var(--surface-muted);
-}
-
-iframe {
-  flex: 1;
-  width: 100%;
-  border: none;
-}
-
-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.doc {
-  margin: 0;
-  padding: 16px;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 21px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
+/* Markdown injecté via v-html : marges et puces d'origine rétablies après le preflight de Tailwind. */
 .prose :deep(p) {
   margin: 0 0 8px;
 }
 
-@media (max-width: 640px) {
-  .preview {
-    width: 100%;
-    height: 100dvh;
-    border: none;
-    border-radius: 0;
-  }
+.prose :deep(ul),
+.prose :deep(ol) {
+  margin: 1em 0;
+  padding-left: 40px;
+  list-style: disc;
+}
 
-  .head {
-    padding-top: max(12px, env(safe-area-inset-top));
-  }
+.prose :deep(ol) {
+  list-style: decimal;
 }
 </style>

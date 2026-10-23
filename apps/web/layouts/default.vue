@@ -45,45 +45,59 @@ const agentLabel = computed(() => {
 </script>
 
 <template>
-  <div class="shell">
+  <div class="min-h-dvh">
     <!-- Desktop : barre latérale -->
-    <aside class="sidebar" aria-label="Navigation principale">
-      <NuxtLink to="/" class="brand">
-        <span class="brand-logo"><AppIcon name="microchip" :size="18" /><span class="brand-dot" :class="{ off: !online }" /></span>
+    <aside class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-(--sidebar-width) lg:flex-col lg:gap-6 lg:border-r lg:bg-surface lg:px-4 lg:py-5" aria-label="Navigation principale">
+      <NuxtLink to="/" class="flex items-center gap-3 font-extrabold text-text">
+        <span class="relative inline-flex size-10 items-center justify-center rounded-md bg-ink text-on-ink">
+          <AppIcon name="microchip" :size="18" /><span class="absolute -top-[3px] -right-[3px] size-3 rounded-full ring-3 ring-surface" :class="online ? 'bg-primary-bright' : 'bg-muted'" />
+        </span>
         <span>
-          <strong>DashIA</strong>
-          <span class="agent-line" :class="{ on: online }"><span class="dot" />{{ agentLabel }}</span>
+          <strong class="block text-base leading-5">DashIA</strong>
+          <span class="flex items-center gap-1.5 text-2xs leading-4 font-bold" :class="online ? 'text-primary' : 'text-muted'"><span class="size-1.5 rounded-full bg-current" />{{ agentLabel }}</span>
         </span>
       </NuxtLink>
 
-      <nav class="side-nav">
-        <NuxtLink v-for="item in PRIMARY_NAV" :key="item.to" :to="item.to" class="side-link" :class="{ active: isRouteActive(route.path, item.to) }">
+      <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto">
+        <NuxtLink
+          v-for="item in PRIMARY_NAV"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-md px-3 py-2.5 font-bold"
+          :class="isRouteActive(route.path, item.to) ? 'bg-ink text-on-ink' : 'text-muted hover:bg-surface-muted'"
+        >
           <AppIcon :name="isRouteActive(route.path, item.to) && item.activeIcon ? item.activeIcon : item.icon" :size="16" />
           {{ item.label }}
         </NuxtLink>
-        <div class="side-sep" />
-        <NuxtLink v-for="item in secondary" :key="item.to" :to="item.to" class="side-link" :class="{ active: isRouteActive(route.path, item.to) }">
+        <div class="mx-3 my-2 h-px bg-border" />
+        <NuxtLink
+          v-for="item in secondary"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-md px-3 py-2.5 font-bold"
+          :class="isRouteActive(route.path, item.to) ? 'bg-ink text-on-ink' : 'text-muted hover:bg-surface-muted'"
+        >
           <AppIcon :name="item.icon" :size="16" />
-          <span class="grow">{{ item.label }}</span>
+          <span class="min-w-0 flex-1">{{ item.label }}</span>
           <span v-if="item.count" class="count-badge">{{ item.count }}</span>
         </NuxtLink>
       </nav>
 
-      <div class="side-footer">
+      <div class="flex flex-col gap-4">
         <StorageMeter v-if="quota" :used-bytes="quota.usedBytes" :max-bytes="quota.maxBytes" />
-        <div v-if="me" class="side-user">
+        <div v-if="me" class="flex items-center gap-2.5 border-t pt-4">
           <UserAvatar :name="me.user.name" :size="32" />
-          <div class="grow">
-            <div class="small strong ellipsis">{{ me.user.name }}</div>
-            <div class="tiny muted ellipsis">{{ me.user.email }}</div>
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-xs font-extrabold">{{ me.user.name }}</div>
+            <div class="truncate text-2xs text-muted">{{ me.user.email }}</div>
           </div>
           <button class="icon-btn" type="button" aria-label="Se déconnecter" @click="signOut"><AppIcon name="logout" /></button>
         </div>
       </div>
     </aside>
 
-    <div class="main-col">
-      <div v-if="isOffline || serverUnreachable" class="offline-banner" role="status">
+    <div class="flex min-h-dvh flex-col pb-[calc(var(--nav-height)+env(safe-area-inset-bottom))] lg:ml-(--sidebar-width) lg:pb-0">
+      <div v-if="isOffline || serverUnreachable" class="flex items-center justify-center gap-2 bg-warning-soft px-4 py-2 text-center text-xs leading-5 font-bold text-warning" role="status">
         <AppIcon name="triangle-exclamation" :size="12" />
         {{ isOffline ? 'Vous êtes hors ligne' : 'Serveur injoignable' }} : l'historique reste consultable, les envois reprendront au retour du réseau.
       </div>
@@ -91,227 +105,24 @@ const agentLabel = computed(() => {
     </div>
 
     <!-- Mobile : barre d'onglets -->
-    <nav class="tabbar" aria-label="Navigation principale">
-      <NuxtLink v-for="item in PRIMARY_NAV" :key="item.to" :to="item.to" class="tab" :class="{ active: isRouteActive(route.path, item.to) }">
+    <nav class="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface-glass pt-2 pb-[max(8px,env(safe-area-inset-bottom))] backdrop-blur-xs lg:hidden" aria-label="Navigation principale">
+      <NuxtLink
+        v-for="item in PRIMARY_NAV"
+        :key="item.to"
+        :to="item.to"
+        class="flex flex-1 flex-col items-center gap-1 text-[10px] leading-[15px]"
+        :class="isRouteActive(route.path, item.to) ? 'font-extrabold text-primary-strong' : 'font-bold text-muted'"
+      >
         <AppIcon :name="isRouteActive(route.path, item.to) && item.activeIcon ? item.activeIcon : item.icon" :size="17" />
         <span>{{ item.label }}</span>
       </NuxtLink>
-      <NuxtLink to="/plus" class="tab" :class="{ active: plusActive }">
-        <span class="tab-icon">
+      <NuxtLink to="/plus" class="flex flex-1 flex-col items-center gap-1 text-[10px] leading-[15px]" :class="plusActive ? 'font-extrabold text-primary-strong' : 'font-bold text-muted'">
+        <span class="relative inline-flex">
           <AppIcon name="grid" :size="17" />
-          <span v-if="pendingActions.count.value" class="tab-dot" />
+          <span v-if="pendingActions.count.value" class="absolute -top-0.5 -right-1 size-2 rounded-full bg-danger" />
         </span>
         <span>Plus</span>
       </NuxtLink>
     </nav>
   </div>
 </template>
-
-<style scoped>
-.shell {
-  min-height: 100dvh;
-}
-
-.main-col {
-  min-height: 100dvh;
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-}
-
-.offline-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--warning-soft);
-  color: var(--warning);
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-}
-
-/* ── Barre d'onglets (mobile) ───────────────────────────── */
-
-.tabbar {
-  position: fixed;
-  inset: auto 0 0;
-  z-index: 20;
-  display: flex;
-  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-  background: var(--surface-glass);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(4px);
-}
-
-.tab {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 15px;
-  font-weight: 700;
-}
-
-.tab.active {
-  color: var(--primary-strong);
-  font-weight: 800;
-}
-
-.tab-icon {
-  position: relative;
-  display: inline-flex;
-}
-
-.tab-dot {
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-
-/* ── Barre latérale (desktop) ───────────────────────────── */
-
-.sidebar {
-  display: none;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text);
-  font-weight: 800;
-}
-
-.brand strong {
-  display: block;
-  font-size: 16px;
-  line-height: 20px;
-}
-
-.brand-logo {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius);
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.brand-dot {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--primary-bright);
-  box-shadow: 0 0 0 3px var(--surface);
-}
-
-.brand-dot.off {
-  background: var(--text-muted);
-}
-
-.agent-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  line-height: 16px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.agent-line .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.agent-line.on {
-  color: var(--primary);
-}
-
-.side-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.side-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
-.side-link:hover {
-  background: var(--surface-muted);
-}
-
-.side-link.active {
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.side-sep {
-  height: 1px;
-  margin: 8px 12px;
-  background: var(--border);
-}
-
-.side-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.side-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-@media (min-width: 1024px) {
-  .tabbar {
-    display: none;
-  }
-
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: var(--sidebar-width);
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    padding: 20px 16px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-  }
-
-  .main-col {
-    margin-left: var(--sidebar-width);
-    padding-bottom: 0;
-  }
-}
-</style>

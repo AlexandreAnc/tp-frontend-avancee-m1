@@ -506,6 +506,10 @@ const backLink = computed(() => {
   const parent = path.value.at(-2);
   return parent ? `/drive?dossier=${parent.id}` : '/drive';
 });
+
+/** Fichier coché : bordure info, fond info pâle à moitié mêlé à la surface (sur la tuile, ou sur la carte FileRow de la liste). */
+const CHECKED_TILE = 'border-info bg-[color-mix(in_srgb,var(--color-info-soft)_50%,var(--color-surface))]';
+const CHECKED_LINE = '[&_article]:border-info [&_article]:bg-[color-mix(in_srgb,var(--color-info-soft)_50%,var(--color-surface))]';
 </script>
 
 <template>
@@ -516,10 +520,10 @@ const backLink = computed(() => {
         <ActionMenu :items="moreItems" label="Plus d’actions sur le drive" />
       </template>
       <template #below>
-        <label class="input-group search">
+        <label class="input-group min-h-11">
           <AppIcon name="search" :size="14" />
           <span class="sr-only">Chercher dans le drive</span>
-          <input v-model="search" type="search" placeholder="Chercher un nom ou un mot du document…">
+          <input v-model="search" class="h-[42px] px-0.5 py-px" type="search" placeholder="Chercher un nom ou un mot du document…">
         </label>
         <div class="chips" role="group" aria-label="Catégories">
           <button class="chip" :class="{ active: !category }" type="button" @click="category = null">Tous · {{ data?.totalFiles ?? 0 }}</button>
@@ -530,13 +534,16 @@ const backLink = computed(() => {
       </template>
     </PageHeader>
 
-    <main class="page drive">
-      <div class="col-main stack">
-        <nav class="views segmented" aria-label="Vues du drive">
+    <main class="page flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+      <div class="flex flex-col gap-3 *:min-w-0">
+        <nav
+          class="segmented max-w-full self-start overflow-x-auto *:inline-flex *:min-h-[34px] *:flex-none *:items-center *:gap-1.5 *:px-3 *:text-[13px] *:whitespace-nowrap"
+          aria-label="Vues du drive"
+        >
           <button v-for="(label, key) in VIEWS" :key="key" type="button" :class="{ active: view === key && !searching }" :aria-current="view === key ? 'page' : undefined" @click="openView(key)">
             <AppIcon :name="key === 'folder' ? 'house' : key === 'recent' ? 'clock' : 'star'" :size="12" />{{ label }}
           </button>
-          <NuxtLink to="/drive/corbeille" class="view-link"><AppIcon name="trash" :size="12" />Corbeille</NuxtLink>
+          <NuxtLink to="/drive/corbeille" class="rounded-sm font-bold text-muted no-underline"><AppIcon name="trash" :size="12" />Corbeille</NuxtLink>
         </nav>
 
         <FileUploader
@@ -549,17 +556,20 @@ const backLink = computed(() => {
         />
         <p v-if="loadError" class="alert alert-error" role="alert"><AppIcon name="circle-exclamation" :size="14" />{{ getErrorMessage(loadError, 'Ce dossier est introuvable.') }}</p>
         <p v-if="error" class="alert alert-error" role="alert"><AppIcon name="circle-exclamation" :size="14" />{{ error }}</p>
-        <p v-if="notice" class="alert alert-success notice" role="status">
-          <AppIcon name="circle-check" :size="14" /><span class="grow">{{ notice.text }}</span>
+        <p v-if="notice" class="alert alert-success" role="status">
+          <AppIcon name="circle-check" :size="14" /><span class="min-w-0 flex-1">{{ notice.text }}</span>
           <button v-if="notice.undo" class="text-btn" type="button" @click="undoNotice">Annuler</button>
         </p>
 
         <!-- Fil d'Ariane : chaque niveau est aussi une cible de dépôt. -->
-        <nav v-if="view === 'folder' && !searching" class="crumbs" aria-label="Emplacement">
+        <nav v-if="view === 'folder' && !searching" class="flex flex-wrap items-center gap-1" aria-label="Emplacement">
           <button
             type="button"
-            class="crumb"
-            :class="{ current: !currentFolder, drop: dropTarget === 'root' }"
+            class="inline-flex max-w-[220px] cursor-pointer items-center gap-1.5 overflow-hidden rounded-sm border border-dashed px-2.5 py-1.5 text-[13px] text-ellipsis whitespace-nowrap"
+            :class="[
+              !currentFolder ? 'font-extrabold text-text' : 'font-bold text-muted',
+              dropTarget === 'root' ? 'border-primary bg-primary-soft' : 'border-transparent hover:bg-surface-muted',
+            ]"
             :aria-current="!currentFolder ? 'page' : undefined"
             @click="openFolder(null)"
             @dragover="onDragOver($event, 'root')"
@@ -569,11 +579,14 @@ const backLink = computed(() => {
             <AppIcon name="house" :size="12" />Mon drive
           </button>
           <template v-for="(crumb, index) in path" :key="crumb.id">
-            <AppIcon name="chevron-right" :size="9" class="sep" />
+            <AppIcon name="chevron-right" :size="9" class="text-muted" />
             <button
               type="button"
-              class="crumb"
-              :class="{ current: index === path.length - 1, drop: dropTarget === crumb.id }"
+              class="inline-flex max-w-[220px] cursor-pointer items-center gap-1.5 overflow-hidden rounded-sm border border-dashed px-2.5 py-1.5 text-[13px] text-ellipsis whitespace-nowrap"
+              :class="[
+                index === path.length - 1 ? 'font-extrabold text-text' : 'font-bold text-muted',
+                dropTarget === crumb.id ? 'border-primary bg-primary-soft' : 'border-transparent hover:bg-surface-muted',
+              ]"
               :aria-current="index === path.length - 1 ? 'page' : undefined"
               @click="openFolder(crumb.id)"
               @dragover="onDragOver($event, crumb.id)"
@@ -585,46 +598,56 @@ const backLink = computed(() => {
           </template>
         </nav>
 
-        <div class="toolbar" :class="{ selecting: selectionCount > 0 }">
-          <label v-if="files.length" class="check-all small strong">
-            <input type="checkbox" :checked="allSelected" :indeterminate="selectionCount > 0 && !allSelected" @change="toggleAll">
+        <div class="flex min-h-9 items-center gap-2" :class="{ 'rounded-md bg-ink px-2 py-1.5 text-on-ink': selectionCount > 0 }">
+          <label v-if="files.length" class="inline-flex cursor-pointer items-center gap-2.5 text-xs font-extrabold">
+            <!-- Écran tactile : case cachée hors sélection (l'appui long l'active). -->
+            <input
+              type="checkbox"
+              class="m-[3px] ml-1"
+              :class="{ 'pointer-coarse:hidden': !selectionCount }"
+              :checked="allSelected"
+              :indeterminate="selectionCount > 0 && !allSelected"
+              @change="toggleAll"
+            >
             {{ selectionCount ? `${selectionCount} sélectionné${selectionCount > 1 ? 's' : ''}` : sectionTitle }}
           </label>
-          <h2 v-else class="small strong">{{ sectionTitle }}</h2>
-          <span class="grow" />
+          <h2 v-else class="text-xs font-extrabold">{{ sectionTitle }}</h2>
+          <span class="min-w-0 flex-1" />
           <template v-if="selectionCount">
             <button class="btn btn-sm" type="button" @click="moveFilesTo([...selection])"><AppIcon name="file-export" :size="12" />Déplacer</button>
             <button class="btn btn-sm btn-danger" type="button" @click="trash([...selection])"><AppIcon name="trash" :size="12" />Corbeille</button>
-            <button class="icon-btn small-btn" type="button" aria-label="Annuler la sélection" @click="selection = new Set()"><AppIcon name="xmark" :size="11" /></button>
+            <button class="icon-btn size-8" type="button" aria-label="Annuler la sélection" @click="selection = new Set()"><AppIcon name="xmark" :size="11" /></button>
           </template>
           <template v-else>
             <ActionMenu v-if="!searching" :items="sortItems" :label="`Trier : ${SORTS[sort]}`" />
-            <div class="segmented layout-toggle" role="group" aria-label="Affichage">
+            <div class="segmented *:min-h-8 *:min-w-9" role="group" aria-label="Affichage">
               <button type="button" :class="{ active: layout === 'list' }" aria-label="Liste" :aria-pressed="layout === 'list'" @click="layout = 'list'"><AppIcon name="list-check" :size="12" /></button>
               <button type="button" :class="{ active: layout === 'grid' }" aria-label="Grille" :aria-pressed="layout === 'grid'" @click="layout = 'grid'"><AppIcon name="grid" :size="12" /></button>
             </div>
           </template>
         </div>
-        <p v-if="selectionCount === 0 && files.length" class="touch-hint tiny muted">Astuce : appui long sur un fichier pour en sélectionner plusieurs.</p>
+        <p v-if="selectionCount === 0 && files.length" class="-mt-2 hidden text-2xs text-muted pointer-coarse:block">Astuce : appui long sur un fichier pour en sélectionner plusieurs.</p>
 
         <!-- Dossiers -->
-        <section v-if="sortedFolders.length" class="folders" aria-label="Dossiers">
+        <section v-if="sortedFolders.length" class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2.5 max-[480px]:grid-cols-[1fr_1fr]" aria-label="Dossiers">
           <div
             v-for="folder in sortedFolders"
             :key="folder.id"
-            class="folder"
-            :class="{ drop: dropTarget === folder.id }"
+            class="flex items-center gap-1 rounded-lg border pr-1.5 transition-[border-color,background] duration-150 ease-[ease]"
+            :class="dropTarget === folder.id
+              ? 'border-primary bg-primary-soft'
+              : 'bg-surface hover:border-[color-mix(in_srgb,var(--color-ink)_30%,var(--color-border))]'"
             draggable="true"
             @dragstart="onDragStart($event, { kind: 'folder', id: folder.id })"
             @dragover="onDragOver($event, folder.id)"
             @dragleave="dropTarget = null"
             @drop="onDrop($event, folder.id)"
           >
-            <button type="button" class="folder-open" :aria-label="`Ouvrir le dossier ${folder.name}`" @click="openFolder(folder.id)">
+            <button type="button" class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 p-3 text-left" :aria-label="`Ouvrir le dossier ${folder.name}`" @click="openFolder(folder.id)">
               <span class="icon-tile tone-info"><AppIcon :name="dropTarget === folder.id ? 'folder-open' : 'folder-solid'" :size="15" /></span>
-              <span class="grow">
-                <strong class="ellipsis">{{ folder.name }}<AppIcon v-if="folder.starred" name="star" :size="10" class="star" label="Favori" /></strong>
-                <span class="tiny muted">{{ plural(folder.fileCount, 'fichier') }}{{ folder.sizeBytes ? ` · ${formatBytes(folder.sizeBytes)}` : '' }}</span>
+              <span class="flex min-w-0 flex-1 flex-col">
+                <strong class="truncate font-extrabold">{{ folder.name }}<AppIcon v-if="folder.starred" name="star" :size="10" class="ml-1.5 text-amber" label="Favori" /></strong>
+                <span class="text-2xs text-muted">{{ plural(folder.fileCount, 'fichier') }}{{ folder.sizeBytes ? ` · ${formatBytes(folder.sizeBytes)}` : '' }}</span>
               </span>
             </button>
             <ActionMenu :items="folderMenu(folder)" :label="`Actions pour ${folder.name}`" />
@@ -632,13 +655,13 @@ const backLink = computed(() => {
         </section>
 
         <!-- Fichiers -->
-        <section v-if="sortedFiles.length" aria-label="Fichiers" :class="{ selecting: selectionCount > 0 }">
-          <div v-if="layout === 'list'" class="stack">
+        <section v-if="sortedFiles.length" aria-label="Fichiers">
+          <div v-if="layout === 'list'" class="flex flex-col gap-3 *:min-w-0">
             <div
               v-for="file in sortedFiles"
               :key="file.id"
-              class="file-line"
-              :class="{ checked: selection.has(file.id) }"
+              class="flex items-start gap-2.5 select-none [-webkit-touch-callout:none] max-[480px]:gap-2"
+              :class="selection.has(file.id) && CHECKED_LINE"
               draggable="true"
               @dragstart="onDragStart($event, { kind: 'file', id: file.id })"
               @touchstart.passive="onTouchStart(file.id)"
@@ -646,28 +669,35 @@ const backLink = computed(() => {
               @touchend="cancelPress"
               @contextmenu="longPressed && $event.preventDefault()"
             >
-              <input type="checkbox" class="pick" :checked="selection.has(file.id)" :aria-label="`Sélectionner ${file.name}`" @change="toggleSelection(file.id)">
-              <div class="grow">
+              <input
+                type="checkbox"
+                class="mt-[26px] mr-[3px] mb-[3px] ml-1 size-[18px] shrink-0 cursor-pointer accent-ink"
+                :class="{ 'pointer-coarse:hidden': !selectionCount }"
+                :checked="selection.has(file.id)"
+                :aria-label="`Sélectionner ${file.name}`"
+                @change="toggleSelection(file.id)"
+              >
+              <div class="min-w-0 flex-1">
                 <FileRow :file="file" :selected="selected?.id === file.id && !selectionCount" @select="onFileClick" @preview="previewId = $event" @delete="trash([$event])" @reindex="reindex">
                   <template #actions>
-                    <AppIcon v-if="file.starred" name="star" :size="12" class="star" label="Favori" />
+                    <AppIcon v-if="file.starred" name="star" :size="12" class="ml-1.5 text-amber" label="Favori" />
                     <ActionMenu :items="fileMenu(file)" :label="`Actions pour ${file.name}`" />
                   </template>
                 </FileRow>
-                <DriveSnippet v-if="file.snippet" :text="file.snippet" class="snippet" />
-                <button v-if="showsPaths" type="button" class="path tiny muted" @click="openFolder(file.folderId ?? null)">
+                <DriveSnippet v-if="file.snippet" :text="file.snippet" class="mt-1.5" />
+                <button v-if="showsPaths" type="button" class="mt-1.5 ml-1 inline-flex cursor-pointer items-center gap-[5px] px-1.5 py-px text-2xs font-bold text-muted hover:text-text" @click="openFolder(file.folderId ?? null)">
                   <AppIcon name="folder" :size="10" />{{ file.path || 'Mon drive' }}
                 </button>
               </div>
             </div>
           </div>
 
-          <div v-else class="tiles">
+          <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 max-[480px]:grid-cols-[1fr_1fr]">
             <article
               v-for="file in sortedFiles"
               :key="file.id"
-              class="tile"
-              :class="{ checked: selection.has(file.id), active: selected?.id === file.id && !selectionCount }"
+              class="relative flex cursor-pointer flex-col overflow-hidden rounded-lg border select-none [-webkit-touch-callout:none]"
+              :class="selection.has(file.id) ? CHECKED_TILE : ['bg-surface', { 'border-ink ring-1 ring-ink': selected?.id === file.id && !selectionCount }]"
               draggable="true"
               @dragstart="onDragStart($event, { kind: 'file', id: file.id })"
               @touchstart.passive="onTouchStart(file.id)"
@@ -677,28 +707,36 @@ const backLink = computed(() => {
               @click="onFileClick(file.id)"
               @dblclick="previewId = file.id"
             >
-              <button type="button" class="thumb" :aria-label="`Aperçu de ${file.name}`" @click.stop="selectionCount ? toggleSelection(file.id) : (previewId = file.id)">
-                <img v-if="isImage(file)" :src="`/api/files/${file.id}/content`" alt="" loading="lazy">
+              <button type="button" class="flex aspect-4/3 cursor-zoom-in items-center justify-center bg-surface-muted px-1.5 py-px" :aria-label="`Aperçu de ${file.name}`" @click.stop="selectionCount ? toggleSelection(file.id) : (previewId = file.id)">
+                <img v-if="isImage(file)" class="pointer-events-none size-full object-cover" :src="`/api/files/${file.id}/content`" alt="" loading="lazy">
                 <FileTypeIcon v-else :mime-type="file.mimeType" :size="44" />
               </button>
-              <input type="checkbox" class="pick tile-pick" :checked="selection.has(file.id)" :aria-label="`Sélectionner ${file.name}`" @click.stop @change="toggleSelection(file.id)">
-              <div class="tile-meta">
-                <span class="grow">
-                  <strong class="ellipsis">{{ file.name }}</strong>
-                  <span class="tiny muted ellipsis">{{ showsPaths ? file.path || 'Mon drive' : fileSubtitle(file) }}</span>
+              <input
+                type="checkbox"
+                class="absolute top-2.5 left-2.5 size-[18px] shrink-0 cursor-pointer accent-ink"
+                :class="{ 'pointer-coarse:hidden': !selectionCount }"
+                :checked="selection.has(file.id)"
+                :aria-label="`Sélectionner ${file.name}`"
+                @click.stop
+                @change="toggleSelection(file.id)"
+              >
+              <div class="flex items-center gap-1 py-2 pr-1.5 pl-3">
+                <span class="flex min-w-0 flex-1 flex-col">
+                  <strong class="truncate text-[13px] font-extrabold">{{ file.name }}</strong>
+                  <span class="truncate text-2xs text-muted">{{ showsPaths ? file.path || 'Mon drive' : fileSubtitle(file) }}</span>
                 </span>
-                <AppIcon v-if="file.starred" name="star" :size="11" class="star" label="Favori" />
+                <AppIcon v-if="file.starred" name="star" :size="11" class="ml-1.5 text-amber" label="Favori" />
                 <ActionMenu :items="fileMenu(file)" :label="`Actions pour ${file.name}`" />
               </div>
             </article>
           </div>
         </section>
 
-        <div v-if="searching && search.trim()" class="ask-agent card">
+        <div v-if="searching && search.trim()" class="card flex items-center gap-3 p-3.5 max-[480px]:flex-wrap">
           <span class="icon-tile tone-primary"><AppIcon name="microchip" :size="14" /></span>
-          <span class="grow small">
+          <span class="flex min-w-0 flex-1 flex-col text-xs">
             <strong>Pas ce que vous cherchez ?</strong>
-            <span class="muted">Votre agent cherche aussi par le sens (« mon contrat d’assurance auto »).</span>
+            <span class="text-muted">Votre agent cherche aussi par le sens (« mon contrat d’assurance auto »).</span>
           </span>
           <button class="btn btn-sm btn-ink" type="button" @click="askAgent">Demander à l’agent</button>
         </div>
@@ -709,13 +747,13 @@ const backLink = computed(() => {
           <p>{{ emptyState.text }}</p>
           <button v-if="view === 'folder'" class="btn btn-sm" type="button" @click="newFolder"><AppIcon name="plus" :size="11" />Nouveau dossier</button>
         </div>
-        <p v-else-if="isEmpty && searching" class="empty-state small">{{ emptyState.text }}</p>
+        <p v-else-if="isEmpty && searching" class="empty-state text-xs">{{ emptyState.text }}</p>
       </div>
 
-      <aside v-if="selected" class="col-side stack">
+      <aside v-if="selected" class="flex flex-col gap-3 *:min-w-0 lg:sticky lg:top-40">
         <FileDetails :file="selected" @preview="previewId = $event" @reindex="reindex" @delete="trash([$event])" />
-        <section v-if="suggestions.length" class="section">
-          <h2 class="row"><AppIcon name="wand" :size="14" class="wand" />Suggestions de l'agent</h2>
+        <section v-if="suggestions.length" class="flex flex-col gap-3">
+          <h2 class="flex items-center gap-2"><AppIcon name="wand" :size="14" class="text-primary" />Suggestions de l'agent</h2>
           <SuggestionCard
             v-for="suggestion in suggestions"
             :key="suggestion.key"
@@ -736,10 +774,15 @@ const backLink = computed(() => {
     <DriveMoveDialog ref="moveDialog" @move="submitMove" />
     <DriveShareDialog ref="shareDialog" />
 
-    <dialog ref="deleteDialog" class="confirm" aria-labelledby="delete-title" @click.self="deleteDialog?.close()">
-      <div v-if="folderToDelete" class="stack">
+    <dialog
+      ref="deleteDialog"
+      class="m-auto w-[min(420px,calc(100%-24px))] rounded-xl border bg-surface p-5 text-text backdrop:bg-night/45"
+      aria-labelledby="delete-title"
+      @click.self="deleteDialog?.close()"
+    >
+      <div v-if="folderToDelete" class="flex flex-col gap-3 *:min-w-0">
         <h2 id="delete-title">Supprimer « {{ folderToDelete.name }} » ?</h2>
-        <p class="small muted">
+        <p class="text-xs text-muted">
           {{ folderToDelete.fileCount
             ? `Ce dossier contient ${plural(folderToDelete.fileCount, 'fichier')} (${formatBytes(folderToDelete.sizeBytes)}).`
             : 'Ce dossier ne contient aucun fichier.' }}
@@ -755,382 +798,3 @@ const backLink = computed(() => {
     </dialog>
   </div>
 </template>
-
-<style scoped>
-.search {
-  min-height: 44px;
-}
-
-.search input {
-  height: 42px;
-}
-
-.wand {
-  color: var(--primary);
-}
-
-.star {
-  margin-left: 6px;
-  color: var(--amber);
-}
-
-.drive {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Vues */
-.views {
-  align-self: flex-start;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.views button,
-.view-link {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 12px;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.view-link {
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.notice .grow {
-  flex: 1;
-}
-
-/* Fil d'Ariane */
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-
-.crumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 220px;
-  padding: 6px 10px;
-  border: 1px dashed transparent;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-
-.crumb:hover {
-  background: var(--surface-muted);
-}
-
-.crumb.current {
-  color: var(--text);
-  font-weight: 800;
-}
-
-.crumb.drop {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.sep {
-  color: var(--text-muted);
-}
-
-/* Barre d'outils */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-}
-
-.toolbar.selecting {
-  padding: 6px 8px;
-  border-radius: var(--radius);
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.check-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.small-btn {
-  width: 32px;
-  height: 32px;
-}
-
-.layout-toggle button {
-  min-width: 36px;
-  min-height: 32px;
-}
-
-.touch-hint {
-  display: none;
-  margin: -8px 0 0;
-}
-
-/* Dossiers */
-.folders {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-
-.folder {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-right: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.folder:hover {
-  border-color: color-mix(in srgb, var(--ink) 30%, var(--border));
-}
-
-.folder.drop {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.folder-open {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 12px;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.folder-open .grow {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.folder-open strong {
-  font-weight: 800;
-}
-
-/* Liste */
-.file-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  -webkit-touch-callout: none;
-  user-select: none;
-}
-
-.file-line .grow {
-  min-width: 0;
-}
-
-.pick {
-  width: 18px;
-  height: 18px;
-  margin-top: 26px;
-  flex-shrink: 0;
-  accent-color: var(--ink);
-  cursor: pointer;
-}
-
-.file-line.checked :deep(.file) {
-  border-color: var(--info);
-  background: color-mix(in srgb, var(--info-soft) 50%, var(--surface));
-}
-
-.snippet {
-  margin-top: 6px;
-}
-
-.path {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin: 6px 0 0 4px;
-  border: none;
-  background: none;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.path:hover {
-  color: var(--text);
-}
-
-/* Grille */
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-}
-
-.tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  overflow: hidden;
-  cursor: pointer;
-  -webkit-touch-callout: none;
-  user-select: none;
-}
-
-.tile.active {
-  border-color: var(--ink);
-  box-shadow: 0 0 0 1px var(--ink);
-}
-
-.tile.checked {
-  border-color: var(--info);
-  background: color-mix(in srgb, var(--info-soft) 50%, var(--surface));
-}
-
-.thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 4 / 3;
-  border: none;
-  background: var(--surface-muted);
-  cursor: zoom-in;
-}
-
-.thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-
-.tile-pick {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  margin: 0;
-}
-
-.tile-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 6px 8px 12px;
-}
-
-.tile-meta .grow {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tile-meta strong {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.ask-agent {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-}
-
-.ask-agent .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Suppression de dossier */
-.confirm {
-  width: min(420px, calc(100% - 24px));
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.confirm::backdrop {
-  background: rgb(28 31 35 / 0.45);
-}
-
-@media (min-width: 1024px) {
-  .drive {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 380px;
-    align-items: start;
-  }
-
-  .col-side {
-    position: sticky;
-    top: 160px;
-  }
-}
-
-/* Écrans tactiles : cases cachées hors sélection (l'appui long l'active), astuce affichée. */
-@media (pointer: coarse) {
-  .touch-hint {
-    display: block;
-  }
-
-  section:not(.selecting) .pick {
-    display: none;
-  }
-
-  .toolbar:not(.selecting) .check-all input {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .folders,
-  .tiles {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  /* Rangées compactes : l'aperçu et le statut « Analysé » sont dans le menu et le détail, le nom garde la place. */
-  .file-line :deep(.eye),
-  .file-line :deep(.badge.tone-primary) {
-    display: none;
-  }
-
-  .file-line {
-    gap: 8px;
-  }
-
-  .ask-agent {
-    flex-wrap: wrap;
-  }
-}
-</style>

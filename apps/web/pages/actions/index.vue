@@ -40,7 +40,7 @@ async function onDecided() {
     </PageHeader>
 
     <main class="page page-narrow">
-      <div v-if="lists[tab].length" class="stack">
+      <div v-if="lists[tab].length" class="flex flex-col gap-3 *:min-w-0">
         <ActionCard v-for="action in lists[tab]" :key="action.id" :action="action" @decided="onDecided" />
       </div>
       <div v-else class="empty-state">

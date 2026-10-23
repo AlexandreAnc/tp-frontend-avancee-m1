@@ -80,191 +80,39 @@ const features = [
 </script>
 
 <template>
-  <header class="top">
-    <span class="small strong muted">Étape {{ step + 1 }} sur {{ steps.length }}</span>
-    <button class="text-btn muted-btn" type="button" @click="navigateTo('/')">Passer</button>
+  <header class="flex items-center justify-between pt-[58px] pb-2.5">
+    <span class="mx-auto pl-12 text-xs font-extrabold text-muted">Étape {{ step + 1 }} sur {{ steps.length }}</span>
+    <button class="text-btn text-sm leading-4 text-muted" type="button" @click="navigateTo('/')">Passer</button>
   </header>
 
-  <div class="progress" aria-hidden="true">
-    <span v-for="(_, index) in steps" :key="index" :class="{ done: index <= step }" />
+  <div class="mt-5 flex gap-1.5" aria-hidden="true">
+    <span v-for="(_, index) in steps" :key="index" class="h-1.5 flex-1 rounded-full" :class="index <= step ? 'bg-primary' : 'bg-border'" />
   </div>
 
-  <section class="body">
-    <div class="illustration" aria-hidden="true">
-      <span class="core"><AppIcon name="microchip" :size="36" /></span>
-      <span class="floating f-planning"><AppIcon name="calendar" :size="11" class="c-info" />Planning</span>
-      <span class="floating f-drive"><AppIcon name="file-lines" :size="11" class="c-primary" />Drive</span>
-      <span class="floating f-home"><AppIcon name="lightbulb" :size="11" class="c-warning" />Maison</span>
+  <section class="flex-1 pt-10">
+    <div class="relative mx-auto flex size-44 items-center justify-center rounded-2xl border bg-surface" aria-hidden="true">
+      <span class="inline-flex size-24 items-center justify-center rounded-xl bg-ink text-on-ink"><AppIcon name="microchip" :size="36" /></span>
+      <span class="absolute inline-flex items-center gap-1 rounded-md border bg-surface px-[11px] py-[7px] text-2xs font-bold drop-shadow-xs top-6 -left-4"><AppIcon name="calendar" :size="11" class="text-info" />Planning</span>
+      <span class="absolute inline-flex items-center gap-1 rounded-md border bg-surface px-[11px] py-[7px] text-2xs font-bold drop-shadow-xs top-16 -right-6"><AppIcon name="file-lines" :size="11" class="text-primary" />Drive</span>
+      <span class="absolute inline-flex items-center gap-1 rounded-md border bg-surface px-[11px] py-[7px] text-2xs font-bold drop-shadow-xs -bottom-3 -left-2"><AppIcon name="lightbulb" :size="11" class="text-warning-bright" />Maison</span>
     </div>
 
-    <h1 class="title">{{ current.title }}</h1>
-    <p class="muted text">{{ current.text }}</p>
+    <h1 class="mt-10 text-[26px] leading-[32.5px] tracking-[-0.65px] whitespace-pre-line">{{ current.title }}</h1>
+    <p class="mt-2 text-muted">{{ current.text }}</p>
 
-    <ul v-if="step === 0" class="features">
-      <li v-for="feature in features" :key="feature.label">
-        <span class="icon-tile tone-primary"><AppIcon :name="feature.icon" :size="12" /></span>
+    <ul v-if="step === 0" class="mt-6 flex flex-col gap-3">
+      <li v-for="feature in features" :key="feature.label" class="flex items-center gap-3 font-semibold">
+        <span class="icon-tile tone-primary size-8 rounded-sm"><AppIcon :name="feature.icon" :size="12" /></span>
         <span>{{ feature.label }}</span>
       </li>
     </ul>
-    <p v-if="message" class="alert alert-error">{{ message }}</p>
+    <p v-if="message" class="alert alert-error mt-4">{{ message }}</p>
   </section>
 
-  <footer class="footer">
+  <footer class="flex flex-col gap-2 pt-4">
     <button class="btn btn-primary btn-xl btn-block btn-shadow" type="button" :disabled="busy" @click="next">
       <span v-if="busy" class="spinner" />{{ current.cta }}
     </button>
     <button class="btn btn-ghost btn-block" type="button" @click="skip">Plus tard</button>
   </footer>
 </template>
-
-<style scoped>
-.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 58px 0 10px;
-}
-
-.top > span {
-  margin: 0 auto;
-  padding-left: 48px;
-}
-
-.muted-btn {
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.progress {
-  display: flex;
-  gap: 6px;
-  margin-top: 20px;
-}
-
-.progress span {
-  flex: 1;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--border);
-}
-
-.progress span.done {
-  background: var(--primary);
-}
-
-.body {
-  flex: 1;
-  padding-top: 40px;
-}
-
-.illustration {
-  position: relative;
-  width: 176px;
-  height: 176px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 40px;
-  background: var(--surface);
-}
-
-.core {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius-xl);
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.floating {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 7px 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  font-size: 11px;
-  line-height: 16.5px;
-  font-weight: 700;
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));
-}
-
-.f-planning {
-  top: 24px;
-  left: -16px;
-}
-
-.f-drive {
-  top: 64px;
-  right: -24px;
-}
-
-.f-home {
-  bottom: -12px;
-  left: -8px;
-}
-
-.c-info {
-  color: var(--info);
-}
-
-.c-primary {
-  color: var(--primary);
-}
-
-.c-warning {
-  color: var(--warning-bright);
-}
-
-.title {
-  margin-top: 40px;
-  font-size: 26px;
-  line-height: 32.5px;
-  letter-spacing: -0.65px;
-  white-space: pre-line;
-}
-
-.text {
-  margin-top: 8px;
-}
-
-.features {
-  list-style: none;
-  margin: 24px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.features li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-}
-
-.features .icon-tile {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-}
-
-.body .alert {
-  margin-top: 16px;
-}
-
-.footer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 16px;
-}
-</style>

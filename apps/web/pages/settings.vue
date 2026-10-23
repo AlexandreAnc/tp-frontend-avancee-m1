@@ -72,14 +72,14 @@ const storage = computed(() => {
   const files = filesData.value?.files ?? [];
   const quota = filesData.value?.quota ?? { usedBytes: 0, maxBytes: 1 };
   const groups = [
-    { label: 'Documents', color: 'var(--info)', test: (type: string) => type === 'application/pdf' || type.includes('wordprocessing') },
-    { label: 'Images', color: 'var(--primary)', test: (type: string) => type.startsWith('image/') },
-    { label: 'Tableurs', color: 'var(--amber)', test: (type: string) => type.includes('spreadsheet') },
-    { label: 'Texte', color: 'var(--text-muted)', test: (type: string) => type.startsWith('text/') },
+    { label: 'Documents', color: 'var(--color-info)', test: (type: string) => type === 'application/pdf' || type.includes('wordprocessing') },
+    { label: 'Images', color: 'var(--color-primary)', test: (type: string) => type.startsWith('image/') },
+    { label: 'Tableurs', color: 'var(--color-amber)', test: (type: string) => type.includes('spreadsheet') },
+    { label: 'Texte', color: 'var(--color-muted)', test: (type: string) => type.startsWith('text/') },
   ].map((group) => ({ ...group, bytes: files.filter((file) => group.test(file.mimeType)).reduce((sum, file) => sum + file.sizeBytes, 0) }));
   // Le quota compte aussi la corbeille, absente de la liste des fichiers.
   const trashBytes = quota.usedBytes - groups.reduce((sum, group) => sum + group.bytes, 0);
-  if (trashBytes > 0) groups.push({ label: 'Corbeille', color: 'var(--danger)', test: () => false, bytes: trashBytes });
+  if (trashBytes > 0) groups.push({ label: 'Corbeille', color: 'var(--color-danger)', test: () => false, bytes: trashBytes });
   return { ...quota, groups, percent: Math.round((quota.usedBytes / quota.maxBytes) * 100) };
 });
 
@@ -191,11 +191,11 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
     <main class="page page-narrow">
       <p v-if="message" class="alert" :class="`alert-${message.tone}`" role="status">{{ message.text }}</p>
 
-      <section v-if="me" class="card profile">
+      <section v-if="me" class="card flex items-center gap-3.5">
         <UserAvatar :name="me.user.name" :size="56" />
-        <div class="grow">
-          <strong class="name">{{ me.user.name }}</strong>
-          <span class="small muted">{{ me.user.email }}</span>
+        <div class="flex min-w-0 flex-1 flex-col">
+          <strong class="text-[16px] font-extrabold">{{ me.user.name }}</strong>
+          <span class="text-xs text-muted">{{ me.user.email }}</span>
         </div>
       </section>
 
@@ -206,7 +206,7 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         <SettingsRow icon="microchip" tone="tone-primary" title="Modèle" :subtitle="modelsData?.canChange ? 'Modèles Ollama installés qui gèrent les outils' : 'Choisi par l’administrateur'">
           <select
             v-if="modelsData?.canChange && modelsData.models.length"
-            class="select"
+            class="min-h-9 px-2.5 max-w-[180px] rounded-sm border bg-surface text-[12px] font-bold"
             :value="modelsData.current ?? ''"
             :disabled="busy === 'model'"
             aria-label="Modèle de chat"
@@ -216,11 +216,11 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
               {{ model.name }}{{ model.vision ? ' · vision' : '' }}
             </option>
           </select>
-          <span v-else class="small muted strong">{{ modelsData?.current ?? agent?.chatModel ?? '—' }}</span>
+          <span v-else class="text-xs font-extrabold text-muted">{{ modelsData?.current ?? agent?.chatModel ?? '—' }}</span>
         </SettingsRow>
         <SettingsRow icon="signal" tone="tone-info" title="Tester la connexion">
           <template #subtitle>
-            <span v-if="ping" class="ok-text"><AppIcon name="check" :size="9" /> {{ ping.latencyMs }} ms · {{ formatRelative(ping.testedAt) }}</span>
+            <span v-if="ping" class="font-bold text-primary"><AppIcon name="check" :size="9" /> {{ ping.latencyMs }} ms · {{ formatRelative(ping.testedAt) }}</span>
             <span v-else>Aller-retour jusqu'à votre PC</span>
           </template>
           <button class="btn btn-sm" type="button" :disabled="busy === 'ping' || !online" @click="testConnection">
@@ -232,18 +232,18 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         </SettingsRow>
       </SettingsGroup>
 
-      <section class="section">
+      <section class="flex flex-col gap-3">
         <h2 class="section-label">Stockage</h2>
-        <div class="card storage">
-          <div class="row between">
-            <p><strong class="big">{{ formatBytes(storage.usedBytes) }}</strong> <span class="muted strong">/ {{ formatBytes(storage.maxBytes) }}</span></p>
-            <span class="small muted strong">{{ storage.percent }} %</span>
+        <div class="card flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
+            <p><strong class="text-2xl font-extrabold">{{ formatBytes(storage.usedBytes) }}</strong> <span class="font-extrabold text-muted">/ {{ formatBytes(storage.maxBytes) }}</span></p>
+            <span class="text-xs font-extrabold text-muted">{{ storage.percent }} %</span>
           </div>
-          <div class="segments" aria-hidden="true">
+          <div class="flex h-2 overflow-hidden rounded-full bg-surface-muted *:block *:h-full" aria-hidden="true">
             <span v-for="group in storage.groups" :key="group.label" :style="{ width: `${(group.bytes / storage.maxBytes) * 100}%`, background: group.color }" />
           </div>
-          <ul class="legend">
-            <li v-for="group in storage.groups" :key="group.label"><i :style="{ background: group.color }" />{{ group.label }} · {{ formatBytes(group.bytes) }}</li>
+          <ul class="grid grid-cols-[1fr_1fr] gap-x-3 gap-y-1 text-[12px] text-muted">
+            <li v-for="group in storage.groups" :key="group.label" class="flex items-center gap-1.5"><i class="size-1.5 rounded-full" :style="{ background: group.color }" />{{ group.label }} · {{ formatBytes(group.bytes) }}</li>
           </ul>
           <NuxtLink to="/drive" class="btn btn-block"><AppIcon name="broom" :size="12" />Gérer le drive</NuxtLink>
           <SettingsRow icon="wand" tone="tone-primary" title="Ranger automatiquement" subtitle="Chaque document analysé va dans le dossier de sa catégorie (annulable dans le journal)">
@@ -283,7 +283,7 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         </SettingsRow>
         <SettingsRow icon="lock" tone="tone-ink" title="Verrouillage automatique" :subtitle="canLock ? (passkeys.length ? 'Face ID demandé à la réouverture' : 'Code de secours demandé à la réouverture') : 'Ajoutez d’abord Face ID ou un code de secours'">
           <select
-            class="select"
+            class="min-h-9 px-2.5 max-w-[180px] rounded-sm border bg-surface text-[12px] font-bold"
             :value="settings?.lockAfterMinutes ?? 'null'"
             :disabled="!canLock"
             aria-label="Délai de verrouillage"
@@ -314,8 +314,8 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         </SettingsRow>
         <SettingsRow icon="sun" tone="tone-warning" title="Résumé du matin">
           <template #subtitle>
-            <label class="inline">à
-              <select class="select mini" :value="settings?.digestHour ?? 8" aria-label="Heure du résumé" @change="updateSettings({ digestHour: Number(($event.target as HTMLSelectElement).value) })">
+            <label class="inline-flex items-center gap-1">à
+              <select class="min-h-6 px-1 max-w-[180px] rounded-sm border bg-surface text-[12px] font-bold" :value="settings?.digestHour ?? 8" aria-label="Heure du résumé" @change="updateSettings({ digestHour: Number(($event.target as HTMLSelectElement).value) })">
                 <option v-for="hour in 24" :key="hour - 1" :value="hour - 1">{{ String(hour - 1).padStart(2, '0') }}:00</option>
               </select>
             </label>
@@ -345,19 +345,19 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         <SettingsRow icon="nfc" tone="tone-primary" title="Tags NFC" to="/tags" subtitle="Routines au tap" />
       </SettingsGroup>
 
-      <section class="section">
+      <section class="flex flex-col gap-3">
         <h2 class="section-label">Confidentialité</h2>
-        <p class="privacy small">
-          <AppIcon name="shield" :size="14" />
+        <p class="flex gap-2.5 rounded-lg border border-[color-mix(in_srgb,var(--color-primary)_25%,var(--color-border))] bg-primary-soft p-3.5 text-xs text-text">
+          <AppIcon name="shield" :size="14" class="mt-[3px] text-primary-strong" />
           <span><strong>Traitement I.A local.</strong> Vos documents sont stockés sur le serveur DashIA et analysés par votre agent : aucune donnée n'est envoyée à un service d'I.A tiers.</span>
         </p>
-        <div class="card card-flush group">
-          <button class="settings-btn" type="button" @click="exportData"><AppIcon name="file-export" :size="14" />Exporter mes données<AppIcon name="chevron-right" :size="12" class="chevron" /></button>
-          <button class="settings-btn danger" type="button" :disabled="busy === 'history'" @click="clearHistory"><AppIcon name="trash" :size="14" />Effacer l'historique des discussions</button>
+        <div class="card card-flush">
+          <button class="flex min-h-14 w-full cursor-pointer items-center gap-3 bg-transparent px-4 text-left font-extrabold" type="button" @click="exportData"><AppIcon name="file-export" :size="14" />Exporter mes données<AppIcon name="chevron-right" :size="12" class="ml-auto text-muted" /></button>
+          <button class="flex min-h-14 w-full cursor-pointer items-center gap-3 bg-transparent px-4 text-left font-extrabold text-danger" type="button" :disabled="busy === 'history'" @click="clearHistory"><AppIcon name="trash" :size="14" />Effacer l'historique des discussions</button>
         </div>
       </section>
 
-      <section class="section">
+      <section class="flex flex-col gap-3">
         <h2 class="section-label">Apparence</h2>
         <div class="segmented">
           <button v-for="option in THEMES" :key="option.value" type="button" :class="{ active: theme === option.value }" @click="setTheme(option.value)">
@@ -366,158 +366,10 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         </div>
       </section>
 
-      <button class="btn btn-lg btn-block logout" type="button" @click="signOut"><AppIcon name="logout" :size="14" />Se déconnecter</button>
-      <button class="text-btn delete" type="button" :disabled="busy === 'account'" @click="deleteAccount">Supprimer mon compte</button>
-      <p class="tiny muted center">DashIA · protocole agent v1</p>
+      <button class="btn btn-lg btn-block text-danger" type="button" @click="signOut"><AppIcon name="logout" :size="14" />Se déconnecter</button>
+      <button class="text-btn self-center text-muted" type="button" :disabled="busy === 'account'" @click="deleteAccount">Supprimer mon compte</button>
+      <p class="text-center text-2xs text-muted">DashIA · protocole agent v1</p>
     </main>
     <TextPromptDialog ref="pinPrompt" @submit="savePin" />
   </div>
 </template>
-
-<style scoped>
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.profile .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.name {
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.select {
-  max-width: 180px;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.select.mini {
-  min-height: 24px;
-  padding: 0 4px;
-}
-
-.inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.ok-text {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.storage {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.big {
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 800;
-}
-
-.segments {
-  display: flex;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-muted);
-  overflow: hidden;
-}
-
-.segments span {
-  display: block;
-  height: 100%;
-}
-
-.legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.legend li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.privacy {
-  display: flex;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
-  border-radius: var(--radius-lg);
-  background: var(--primary-soft);
-  color: var(--text);
-}
-
-.privacy .app-icon {
-  margin-top: 3px;
-  color: var(--primary-strong);
-}
-
-.group > * + * {
-  border-top: 1px solid var(--border);
-}
-
-.settings-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 56px;
-  padding: 0 16px;
-  border: none;
-  background: none;
-  font-weight: 800;
-  text-align: left;
-  cursor: pointer;
-}
-
-.settings-btn .chevron {
-  margin-left: auto;
-  color: var(--text-muted);
-}
-
-.settings-btn.danger {
-  color: var(--danger);
-}
-
-.logout {
-  color: var(--danger);
-}
-
-.delete {
-  align-self: center;
-  color: var(--text-muted);
-}
-
-.center {
-  text-align: center;
-}
-</style>

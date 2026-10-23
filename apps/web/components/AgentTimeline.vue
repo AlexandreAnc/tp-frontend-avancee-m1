@@ -64,133 +64,40 @@ const duration = computed(() => {
   return `${seconds.toFixed(1).replace('.', ',')} s`;
 });
 
+const MARK_TONES: Record<Row['state'], string> = {
+  done: 'bg-primary text-white',
+  error: 'bg-danger text-white',
+  running: 'bg-info-soft text-info',
+};
+
 watch(() => props.running, (running) => {
   open.value = running;
 }, { immediate: true });
 </script>
 
 <template>
-  <div v-if="rows.length || running" class="steps-card">
-    <button class="head" type="button" :aria-expanded="open" @click="open = !open">
+  <div v-if="rows.length || running" class="rounded-lg border bg-surface">
+    <button class="flex w-full cursor-pointer items-center gap-2 bg-transparent px-3.5 py-3 text-left text-[12px]" type="button" :aria-expanded="open" @click="open = !open">
       <span v-if="running" class="spinner" />
-      <AppIcon v-else name="list-check" :size="12" class="ok" />
-      <strong class="grow">{{ rows.length }} étape{{ rows.length > 1 ? 's' : '' }}{{ duration && !running ? ` · ${duration}` : '' }}</strong>
-      <AppIcon name="chevron-down" :size="12" class="chevron" :class="{ open }" />
+      <AppIcon v-else name="list-check" :size="12" class="text-primary" />
+      <strong class="min-w-0 flex-1">{{ rows.length }} étape{{ rows.length > 1 ? 's' : '' }}{{ duration && !running ? ` · ${duration}` : '' }}</strong>
+      <AppIcon name="chevron-down" :size="12" class="text-muted [transition:rotate_0.2s]" :class="{ 'rotate-180': open }" />
     </button>
-    <ol v-if="open" class="rows">
-      <li v-for="row in rows" :key="row.key" :class="row.state">
-        <span class="mark">
-          <span v-if="row.state === 'running'" class="spinner" />
+    <ol v-if="open" class="flex list-none flex-col gap-2.5 px-3.5 pb-3.5">
+      <li v-for="row in rows" :key="row.key" class="flex gap-2.5 text-xs">
+        <span class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full" :class="MARK_TONES[row.state]">
+          <span v-if="row.state === 'running'" class="spinner size-2.5 border-[1.5px]" />
           <AppIcon v-else :name="row.state === 'error' ? 'xmark' : 'check'" :size="10" />
         </span>
-        <span class="grow">
-          <strong>{{ row.label }}</strong>
-          <span v-if="row.detail" class="tiny muted">{{ row.detail }}</span>
+        <span class="flex min-w-0 flex-1 flex-col">
+          <strong class="font-bold">{{ row.label }}</strong>
+          <span v-if="row.detail" class="text-2xs text-muted">{{ row.detail }}</span>
         </span>
       </li>
-      <li v-if="running && thinking?.kind === 'thinking'" class="thinking">
-        <span class="mark"><AppIcon name="microchip" :size="10" /></span>
-        <span class="tiny muted grow">{{ thinking.text }}</span>
+      <li v-if="running && thinking?.kind === 'thinking'" class="flex gap-2.5 text-xs">
+        <span class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted"><AppIcon name="microchip" :size="10" /></span>
+        <span class="line-clamp-3 min-w-0 flex-1 text-2xs text-muted italic">{{ thinking.text }}</span>
       </li>
     </ol>
   </div>
 </template>
-
-<style scoped>
-.steps-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 14px;
-  border: none;
-  background: none;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.ok {
-  color: var(--primary);
-}
-
-.chevron {
-  color: var(--text-muted);
-  transition: transform 0.2s;
-}
-
-.chevron.open {
-  transform: rotate(180deg);
-}
-
-.rows {
-  list-style: none;
-  margin: 0;
-  padding: 0 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rows li {
-  display: flex;
-  gap: 10px;
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.rows .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.rows strong {
-  font-weight: 700;
-}
-
-.mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-}
-
-.running .mark {
-  background: var(--info-soft);
-  color: var(--info);
-}
-
-.error .mark {
-  background: var(--danger);
-}
-
-.thinking .mark {
-  background: var(--surface-muted);
-  color: var(--text-muted);
-}
-
-.thinking .tiny {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-style: italic;
-}
-
-.mark .spinner {
-  width: 10px;
-  height: 10px;
-  border-width: 1.5px;
-}
-</style>

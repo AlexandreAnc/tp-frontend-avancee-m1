@@ -33,87 +33,25 @@ async function undo() {
 </script>
 
 <template>
-  <li class="entry">
-    <span class="icon-tile round" :class="tone"><AppIcon :name="entry.icon" :size="13" /></span>
-    <div class="body" :class="{ failed: entry.status === 'failed' }">
-      <div class="top">
-        <strong class="title">{{ entry.title }}</strong>
-        <span class="tiny muted strong">{{ formatTime(entry.createdAt) }}</span>
+  <li class="relative flex gap-3">
+    <span class="icon-tile round z-1 border" :class="tone || 'bg-surface'"><AppIcon :name="entry.icon" :size="13" /></span>
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border bg-surface p-[15px]"
+      :class="{ 'border-[color-mix(in_srgb,var(--color-danger)_25%,var(--color-border))]': entry.status === 'failed' }"
+    >
+      <div class="flex justify-between gap-2">
+        <strong class="font-extrabold [word-break:break-word]">{{ entry.title }}</strong>
+        <span class="text-2xs font-extrabold text-muted">{{ formatTime(entry.createdAt) }}</span>
       </div>
-      <p v-if="entry.detail" class="small" :class="entry.status === 'failed' ? 'error' : 'muted'">{{ entry.detail }}</p>
-      <div class="row between">
-        <div class="row">
+      <p v-if="entry.detail" class="text-xs" :class="entry.status === 'failed' ? 'font-bold text-danger' : 'text-muted'">{{ entry.detail }}</p>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
           <span class="badge" :class="STATUS[entry.status].tone">{{ STATUS[entry.status].label }}</span>
           <span class="badge"><AppIcon v-if="entry.origin === 'Agent'" name="microchip" :size="10" /><AppIcon v-else-if="entry.origin === 'Validé par vous'" name="face-smile" :size="10" />{{ entry.origin }}</span>
         </div>
-        <button v-if="entry.undoable" class="text-btn undo" type="button" :disabled="busy" @click="undo">Annuler</button>
+        <button v-if="entry.undoable" class="text-btn text-text underline" type="button" :disabled="busy" @click="undo">Annuler</button>
       </div>
-      <p v-if="error" class="small error">{{ error }}</p>
+      <p v-if="error" class="text-xs font-bold text-danger">{{ error }}</p>
     </div>
   </li>
 </template>
-
-<style scoped>
-.entry {
-  position: relative;
-  display: flex;
-  gap: 12px;
-}
-
-.entry .icon-tile {
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  z-index: 1;
-}
-
-.entry .icon-tile.tone-danger {
-  background: var(--danger-soft);
-}
-
-.entry .icon-tile.tone-primary {
-  background: var(--primary-soft);
-}
-
-.entry .icon-tile.tone-info {
-  background: var(--info-soft);
-}
-
-.body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 15px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.body.failed {
-  border-color: color-mix(in srgb, var(--danger) 25%, var(--border));
-}
-
-.top {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.title {
-  font-weight: 800;
-  word-break: break-word;
-}
-
-.error {
-  color: var(--danger);
-  font-weight: 700;
-}
-
-.undo {
-  color: var(--text);
-  text-decoration: underline;
-}
-</style>

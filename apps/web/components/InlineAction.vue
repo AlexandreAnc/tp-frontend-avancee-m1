@@ -37,53 +37,25 @@ async function undo() {
 </script>
 
 <template>
-  <div class="inline-action" :class="output.status === 'pending' && action?.status === 'pending' ? 'waiting' : 'done'">
+  <div
+    class="flex flex-col items-start gap-2 rounded-lg border p-[15px]"
+    :class="output.status === 'pending' && action?.status === 'pending' ? 'border-amber bg-[color-mix(in_srgb,var(--color-warning-soft)_60%,var(--color-surface))]' : 'bg-surface'"
+  >
     <template v-if="output.status === 'pending'">
       <span v-if="status" class="badge" :class="status.tone"><AppIcon :name="status.icon" :size="10" />{{ action?.status === 'pending' ? 'En attente de validation' : status.label }}</span>
-      <strong>{{ action?.summary ?? summary }}</strong>
-      <div class="buttons">
+      <strong class="font-extrabold">{{ action?.summary ?? summary }}</strong>
+      <div class="flex gap-2">
         <NuxtLink :to="`/actions/${output.actionId}`" class="btn btn-sm btn-ink">Voir l'action</NuxtLink>
       </div>
     </template>
     <template v-else>
       <span class="badge" :class="undone ? '' : 'tone-primary'"><AppIcon :name="undone ? 'ban' : 'check'" :size="10" />{{ undone ? 'Annulé' : 'Fait' }}</span>
-      <strong>{{ summary }}</strong>
-      <div v-if="!undone" class="buttons">
+      <strong class="font-extrabold">{{ summary }}</strong>
+      <div v-if="!undone" class="flex gap-2">
         <button class="btn btn-sm" type="button" @click="undo">Annuler</button>
         <NuxtLink to="/journal" class="btn btn-sm btn-ghost">Journal</NuxtLink>
       </div>
-      <p v-if="error" class="small error">{{ error }}</p>
+      <p v-if="error" class="text-xs text-danger">{{ error }}</p>
     </template>
   </div>
 </template>
-
-<style scoped>
-.inline-action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 15px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.inline-action.waiting {
-  border-color: var(--amber);
-  background: color-mix(in srgb, var(--warning-soft) 60%, var(--surface));
-}
-
-.inline-action strong {
-  font-weight: 800;
-}
-
-.buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.error {
-  color: var(--danger);
-}
-</style>

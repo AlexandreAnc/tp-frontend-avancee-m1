@@ -135,14 +135,14 @@ const SUGGESTIONS = ['Mon résumé du jour', 'Quelles sont mes prochaines éché
 </script>
 
 <template>
-  <div class="chat-page">
+  <div class="flex h-[calc(100dvh_-_var(--nav-height)_-_env(safe-area-inset-bottom))] flex-col lg:h-dvh">
     <PageHeader title="Discussions" :sticky="true">
       <template #subtitle>
-        <span class="model" :class="{ on: online }"><span class="dot" />{{ agent ? `${agent.chatModel} · local` : online === false ? 'Agent hors ligne' : 'Agent local' }}</span>
+        <span class="inline-flex items-center gap-[5px]" :class="{ 'text-primary': online }"><span class="size-1.5 rounded-full bg-current" />{{ agent ? `${agent.chatModel} · local` : online === false ? 'Agent hors ligne' : 'Agent local' }}</span>
       </template>
       <template #actions>
         <button v-if="conversationId" class="icon-btn" type="button" aria-label="Supprimer la discussion" @click="remove"><AppIcon name="trash" /></button>
-        <NuxtLink to="/chat" class="icon-btn tone-ink-btn" aria-label="Nouvelle discussion"><AppIcon name="pen-to-square" /></NuxtLink>
+        <NuxtLink to="/chat" class="icon-btn border-ink bg-ink text-on-ink" aria-label="Nouvelle discussion"><AppIcon name="pen-to-square" /></NuxtLink>
       </template>
       <template v-if="list?.conversations.length" #below>
         <div class="chips">
@@ -153,23 +153,23 @@ const SUGGESTIONS = ['Mon résumé du jour', 'Quelles sont mes prochaines éché
       </template>
     </PageHeader>
 
-    <div ref="scroller" class="messages" aria-live="polite">
-      <div class="thread">
+    <div ref="scroller" class="flex-1 overflow-y-auto p-4" aria-live="polite">
+      <div class="mx-auto flex w-full max-w-[760px] flex-col gap-3.5">
         <p v-if="loadError" class="alert alert-error">{{ getErrorMessage(loadError, 'Discussion introuvable.') }}</p>
 
-        <div v-if="!conversationId" class="intro">
+        <div v-if="!conversationId" class="flex flex-col items-center gap-2 px-4 py-10 text-center">
           <BrandLogo :size="56" :online="Boolean(online)" />
-          <h2>Que puis-je faire pour vous ?</h2>
-          <p class="muted small">Je fouille vos documents, consulte votre planning et prépare des actions que vous validez.</p>
+          <h2 class="mt-3 text-[18px]">Que puis-je faire pour vous ?</h2>
+          <p class="text-xs text-muted">Je fouille vos documents, consulte votre planning et prépare des actions que vous validez.</p>
         </div>
 
         <template v-for="(message, index) in messages" :key="message.id">
-          <p v-if="dayLabel(index)" class="day tiny muted strong">{{ dayLabel(index) }}</p>
+          <p v-if="dayLabel(index)" class="text-center text-2xs font-extrabold text-muted">{{ dayLabel(index) }}</p>
           <ChatMessage v-if="message.role === 'user'" :message="message" :answered="replies.has(message.id)" :agent-online="online" @retry="retry" />
           <template v-if="message.role === 'user' && !replies.has(message.id) && (steps[message.id]?.length || message.status === 'processing')">
-            <div class="agent-pending">
-              <span class="avatar"><AppIcon name="microchip" :size="14" /></span>
-              <AgentTimeline class="grow" :steps="steps[message.id] ?? []" :running="message.status === 'processing'" />
+            <div class="mr-[8%] flex items-start gap-2.5">
+              <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-sm bg-ink text-on-ink"><AppIcon name="microchip" :size="14" /></span>
+              <AgentTimeline class="min-w-0 flex-1" :steps="steps[message.id] ?? []" :running="message.status === 'processing'" />
             </div>
           </template>
           <ChatMessage v-if="message.role === 'assistant'" :message="message">
@@ -182,15 +182,15 @@ const SUGGESTIONS = ['Mon résumé du jour', 'Quelles sont mes prochaines éché
           </ChatMessage>
         </template>
 
-        <div v-if="typing" class="agent-pending">
-          <span class="avatar"><AppIcon name="microchip" :size="14" /></span>
-          <span class="typing"><span /><span /><span /> Rédaction de la réponse…</span>
+        <div v-if="typing" class="mr-[8%] flex items-start gap-2.5">
+          <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-sm bg-ink text-on-ink"><AppIcon name="microchip" :size="14" /></span>
+          <span class="inline-flex items-center gap-1 rounded-lg border bg-surface px-3.5 py-2.5 text-[12px] font-bold text-muted"><span class="typing-dot size-[5px] rounded-full bg-current" /><span class="typing-dot size-[5px] rounded-full bg-current" /><span class="typing-dot mr-1 size-[5px] rounded-full bg-current" /> Rédaction de la réponse…</span>
         </div>
       </div>
     </div>
 
-    <footer class="composer-bar">
-      <div class="thread">
+    <footer class="border-t bg-bg px-4 py-3">
+      <div class="mx-auto flex w-full max-w-[760px] flex-col gap-2">
         <p v-if="lastUserMessage?.status === 'queued' && online === false" class="alert alert-warning">
           <AppIcon name="plug-xmark" :size="14" />Votre agent local est hors ligne : la demande sera traitée dès sa reconnexion.
         </p>
@@ -202,136 +202,22 @@ const SUGGESTIONS = ['Mon résumé du jour', 'Quelles sont mes prochaines éché
 </template>
 
 <style scoped>
-.chat-page {
-  display: flex;
-  flex-direction: column;
-  height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom));
-}
-
-.model {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.model .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.model.on {
-  color: var(--primary);
-}
-
-.tone-ink-btn {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--on-ink);
-}
-
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-.thread {
-  width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 40px 16px;
-  text-align: center;
-}
-
-.intro h2 {
-  margin-top: 12px;
-  font-size: 18px;
-}
-
-.day {
-  text-align: center;
-}
-
-.agent-pending {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-right: 8%;
-}
-
-.avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.typing {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.typing span {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
+/* Points animés de « Rédaction de la réponse… » (keyframes). */
+.typing-dot {
   animation: blink 1.2s infinite;
 }
 
-.typing span:nth-child(2) {
+.typing-dot:nth-child(2) {
   animation-delay: 0.2s;
 }
 
-.typing span:nth-child(3) {
+.typing-dot:nth-child(3) {
   animation-delay: 0.4s;
-  margin-right: 4px;
 }
 
 @keyframes blink {
   50% {
     opacity: 0.3;
-  }
-}
-
-.composer-bar {
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-}
-
-.composer-bar .thread {
-  gap: 8px;
-}
-
-@media (min-width: 1024px) {
-  .chat-page {
-    height: 100dvh;
   }
 }
 </style>

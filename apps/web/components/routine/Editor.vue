@@ -99,30 +99,30 @@ async function save() {
 </script>
 
 <template>
-  <section class="editor">
-    <div class="progress">
-      <div v-for="(label, index) in STEPS" :key="label" class="progress-step" :class="{ done: index <= step }">
-        <span />{{ label }}
+  <section class="flex flex-col gap-4 rounded-xl border bg-surface p-5">
+    <div class="grid grid-cols-[repeat(3,1fr)] gap-1.5">
+      <div v-for="(label, index) in STEPS" :key="label" class="flex flex-col gap-1.5 text-[11px] font-bold" :class="index <= step ? 'text-text' : 'text-muted'">
+        <span class="h-1.5 rounded-full" :class="index <= step ? 'bg-primary' : 'bg-border'" />{{ label }}
       </div>
     </div>
 
     <!-- 1. Déclencheur -->
     <template v-if="step === 0">
-      <h2 class="question">Quand la routine démarre-t-elle ?</h2>
-      <div class="options">
-        <button v-for="option in TRIGGERS" :key="option.id" type="button" class="option" :class="{ active: trigger === option.id, wide: option.id === 'manual' }" @click="trigger = option.id">
+      <h2 class="text-[18px] leading-6">Quand la routine démarre-t-elle ?</h2>
+      <div class="grid grid-cols-[1fr_1fr] gap-2">
+        <button v-for="option in TRIGGERS" :key="option.id" type="button" class="flex cursor-pointer flex-col items-start gap-1 rounded-lg text-left" :class="[trigger === option.id ? 'border-2 border-primary bg-primary-soft p-[13px]' : 'border bg-surface p-3.5', { 'col-span-full': option.id === 'manual' }]" @click="trigger = option.id">
           <AppIcon :name="option.icon" :size="16" />
-          <strong>{{ option.title }}</strong>
-          <span class="tiny muted">{{ option.hint }}</span>
+          <strong class="font-extrabold">{{ option.title }}</strong>
+          <span class="text-2xs text-muted">{{ option.hint }}</span>
         </button>
       </div>
       <template v-if="trigger === 'time'">
-        <label class="time-box">
-          <span class="muted strong">Heure</span>
-          <input v-model="time" type="time" required>
+        <label class="flex items-center justify-between rounded-lg bg-surface-muted px-4 py-3">
+          <span class="font-extrabold text-muted">Heure</span>
+          <input v-model="time" class="pl-px text-[22px] font-extrabold" type="time" required>
         </label>
-        <div class="days" role="group" aria-label="Jours">
-          <button v-for="(label, index) in DAYS" :key="index" type="button" class="day" :class="{ active: days.includes(index + 1) }" :aria-pressed="days.includes(index + 1)" @click="toggleDay(index + 1)">{{ label }}</button>
+        <div class="grid grid-cols-[repeat(7,1fr)] gap-1.5" role="group" aria-label="Jours">
+          <button v-for="(label, index) in DAYS" :key="index" type="button" class="h-9 cursor-pointer rounded-full border font-extrabold" :class="days.includes(index + 1) ? 'border-ink bg-ink text-on-ink' : 'bg-surface'" :aria-pressed="days.includes(index + 1)" @click="toggleDay(index + 1)">{{ label }}</button>
         </div>
       </template>
       <p v-else-if="trigger === 'nfc'" class="alert alert-info">Après l'enregistrement, associez la routine à un tag dans « Tags NFC ».</p>
@@ -130,14 +130,14 @@ async function save() {
 
     <!-- 2. Actions -->
     <template v-else-if="step === 1">
-      <h2 class="question">Que doit faire la routine ?</h2>
-      <ol class="actions">
-        <li v-for="(item, index) in actions" :key="index" class="action">
-          <div class="row between">
-            <strong class="small">{{ index + 1 }}. {{ item.label }}</strong>
-            <button class="icon-btn small-btn" type="button" aria-label="Retirer l'étape" @click="actions.splice(index, 1)"><AppIcon name="xmark" :size="10" /></button>
+      <h2 class="text-[18px] leading-6">Que doit faire la routine ?</h2>
+      <ol class="flex flex-col gap-2.5">
+        <li v-for="(item, index) in actions" :key="index" class="flex flex-col gap-2 rounded-md bg-surface-muted p-3">
+          <div class="flex items-center justify-between gap-2">
+            <strong class="text-xs">{{ index + 1 }}. {{ item.label }}</strong>
+            <button class="icon-btn size-6" type="button" aria-label="Retirer l'étape" @click="actions.splice(index, 1)"><AppIcon name="xmark" :size="10" /></button>
           </div>
-          <div v-if="item.type === 'hue.set_room'" class="fields">
+          <div v-if="item.type === 'hue.set_room'" class="grid grid-cols-[1fr_1fr] gap-2">
             <select v-model="item.payload.roomId" class="input" @change="relabel(item)">
               <option value="all">Toute la maison</option>
               <option v-for="room in rooms" :key="room.id" :value="room.id">{{ room.name }}</option>
@@ -154,7 +154,7 @@ async function save() {
           <select v-else-if="item.type === 'hue.activate_scene'" v-model="item.payload.sceneId" class="input" @change="relabel(item)">
             <option v-for="sceneItem in scenes" :key="sceneItem.id" :value="sceneItem.id">{{ sceneItem.name }}</option>
           </select>
-          <div v-else-if="item.type === 'reminder'" class="fields">
+          <div v-else-if="item.type === 'reminder'" class="grid grid-cols-[1fr_1fr] gap-2">
             <input v-model="item.text" class="input" maxlength="300" placeholder="Texte du rappel" @change="relabel(item)">
             <select v-model.number="item.offsetMinutes" class="input" @change="relabel(item)">
               <option :value="15">dans 15 min</option>
@@ -170,225 +170,40 @@ async function save() {
           <input v-if="item.type === 'notify' || item.type === 'agent'" v-model="item.label" class="input" maxlength="120" placeholder="Nom de l'étape">
         </li>
       </ol>
-      <div class="add">
-        <span class="small muted strong">Ajouter</span>
-        <div class="chips">
+      <div class="flex flex-col gap-2">
+        <span class="text-xs font-extrabold text-muted">Ajouter</span>
+        <div class="chips flex-wrap">
           <button class="chip" type="button" @click="addStep('room')"><AppIcon name="lightbulb" :size="12" />Pièce</button>
           <button class="chip" type="button" :disabled="!scenes.length" @click="addStep('scene')"><AppIcon name="book-open" :size="12" />Scène</button>
           <button class="chip" type="button" @click="addStep('reminder')"><AppIcon name="bell" :size="12" />Rappel</button>
           <button class="chip" type="button" @click="addStep('notify')"><AppIcon name="paper-plane" :size="12" />Notification</button>
           <button class="chip" type="button" @click="addStep('agent')"><AppIcon name="microchip" :size="12" />Question à l'agent</button>
         </div>
-        <p v-if="!home?.connected" class="tiny muted">Philips Hue n'est pas connecté : les étapes lumières échoueront tant qu'il ne l'est pas.</p>
+        <p v-if="!home?.connected" class="text-2xs text-muted">Philips Hue n'est pas connecté : les étapes lumières échoueront tant qu'il ne l'est pas.</p>
       </div>
     </template>
 
     <!-- 3. Récap -->
     <template v-else>
-      <h2 class="question">On l'appelle comment ?</h2>
+      <h2 class="text-[18px] leading-6">On l'appelle comment ?</h2>
       <input v-model="name" class="input" maxlength="80" placeholder="Bonne nuit" required>
-      <div class="icons" role="radiogroup" aria-label="Icône">
-        <button v-for="item in ROUTINE_ICONS" :key="item" type="button" class="icon-tile" :class="[ROUTINE_ICON_TONES[item], { picked: icon === item }]" role="radio" :aria-checked="icon === item" :aria-label="item" @click="icon = item">
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Icône">
+        <button v-for="item in ROUTINE_ICONS" :key="item" type="button" class="icon-tile cursor-pointer border-2" :class="[ROUTINE_ICON_TONES[item], icon === item ? 'border-ink' : 'border-transparent']" role="radio" :aria-checked="icon === item" :aria-label="item" @click="icon = item">
           <AppIcon :name="item" :size="14" />
         </button>
       </div>
-      <div class="recap small">
+      <div class="flex flex-col gap-1.5 rounded-md bg-surface-muted p-3.5 text-xs">
         <p><strong>Déclencheur :</strong> {{ trigger === 'time' ? `${time} · ${describeDays(days)}` : trigger === 'nfc' ? 'tag NFC' : 'manuel' }}</p>
         <p><strong>{{ actions.length }} étape{{ actions.length > 1 ? 's' : '' }} :</strong> {{ actions.map((item) => item.label).join(' → ') }}</p>
-        <p class="muted">Niveau : action directe, sans validation (chaque action reste annulable depuis le journal).</p>
+        <p class="text-muted">Niveau : action directe, sans validation (chaque action reste annulable depuis le journal).</p>
       </div>
     </template>
 
     <p v-if="error" class="alert alert-error">{{ error }}</p>
-    <div class="nav">
+    <div class="grid grid-cols-[1fr_2fr] gap-2">
       <button class="btn btn-lg" type="button" @click="step === 0 ? emit('cancel') : step--">{{ step === 0 ? 'Annuler' : 'Retour' }}</button>
       <button v-if="step < STEPS.length - 1" class="btn btn-ink btn-lg" type="button" :disabled="!canContinue" @click="step++">Continuer</button>
       <button v-else class="btn btn-primary btn-lg" type="button" :disabled="!canContinue || busy" @click="save">{{ initial.id ? 'Enregistrer' : 'Créer la routine' }}</button>
     </div>
   </section>
 </template>
-
-<style scoped>
-.editor {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-}
-
-.progress {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.progress-step {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.progress-step span {
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--border);
-}
-
-.progress-step.done {
-  color: var(--text);
-}
-
-.progress-step.done span {
-  background: var(--primary);
-}
-
-.question {
-  font-size: 18px;
-  line-height: 24px;
-}
-
-.options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  text-align: left;
-  cursor: pointer;
-}
-
-.option.wide {
-  grid-column: 1 / -1;
-}
-
-.option.active {
-  border: 2px solid var(--primary);
-  padding: 13px;
-  background: var(--primary-soft);
-}
-
-.option strong {
-  font-weight: 800;
-}
-
-.time-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-radius: var(--radius-lg);
-  background: var(--surface-muted);
-}
-
-.time-box input {
-  border: none;
-  background: none;
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-
-.day {
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.day.active {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.actions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.action {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-}
-
-.fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.small-btn {
-  width: 24px;
-  height: 24px;
-}
-
-.add {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.chips {
-  flex-wrap: wrap;
-}
-
-.icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.icons .icon-tile {
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.icons .picked {
-  border-color: var(--ink);
-}
-
-.recap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-}
-
-.nav {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 8px;
-}
-</style>

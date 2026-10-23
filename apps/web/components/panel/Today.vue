@@ -17,13 +17,13 @@ function subtitle(item: AgendaItem): string {
 
 <template>
   <PanelCard title="Aujourd'hui" icon="calendar" tone="info" :link="{ to: '/planning', label: 'Planning' }">
-    <ul v-if="timed.length" class="timeline">
-      <li v-for="item in timed" :key="`${item.kind}-${item.id}`" :class="item.kind">
-        <span class="time">{{ item.kind === 'event' && item.allDay ? 'Jour' : formatTime(item.start) }}</span>
-        <span class="bar" />
-        <span class="grow">
-          <strong class="ellipsis">{{ item.title }}</strong>
-          <span class="tiny muted ellipsis">{{ subtitle(item) }}</span>
+    <ul v-if="timed.length" class="flex flex-col gap-3.5">
+      <li v-for="item in timed" :key="`${item.kind}-${item.id}`" class="flex items-stretch gap-3">
+        <span class="w-10 shrink-0 text-[12px] leading-5 font-bold text-muted">{{ item.kind === 'event' && item.allDay ? 'Jour' : formatTime(item.start) }}</span>
+        <span class="w-[3px] shrink-0 rounded-full" :class="item.kind === 'reminder' ? 'bg-border' : 'bg-info'" />
+        <span class="flex min-w-0 flex-1 flex-col">
+          <strong class="truncate">{{ item.title }}</strong>
+          <span class="truncate text-2xs text-muted">{{ subtitle(item) }}</span>
         </span>
       </li>
     </ul>
@@ -36,78 +36,11 @@ function subtitle(item: AgendaItem): string {
       </NuxtLink>
     </div>
 
-    <NuxtLink v-for="deadline in deadlines" :key="deadline.id" to="/planning" class="deadline">
+    <NuxtLink v-for="deadline in deadlines" :key="deadline.id" to="/planning" class="flex items-center gap-2 rounded-md bg-danger-soft px-3 py-2.5 text-xs text-danger">
       <AppIcon name="hourglass" :size="12" />
-      <strong class="ellipsis">{{ deadline.title }}</strong>
-      <span class="tiny ellipsis grow">· {{ deadline.fileName }}</span>
-      <span class="days">J‑{{ daysUntil(deadline.start) }}</span>
+      <strong class="truncate font-bold text-text">{{ deadline.title }}</strong>
+      <span class="min-w-0 flex-1 truncate text-2xs text-muted">· {{ deadline.fileName }}</span>
+      <span class="font-extrabold">J‑{{ daysUntil(deadline.start) }}</span>
     </NuxtLink>
   </PanelCard>
 </template>
-
-<style scoped>
-.timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.timeline li {
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-}
-
-.time {
-  width: 40px;
-  flex-shrink: 0;
-  font-size: 12px;
-  line-height: 20px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.bar {
-  width: 3px;
-  flex-shrink: 0;
-  border-radius: var(--radius-pill);
-  background: var(--info);
-}
-
-.reminder .bar {
-  background: var(--border);
-}
-
-.timeline .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.deadline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.deadline strong {
-  color: var(--text);
-  font-weight: 700;
-}
-
-.deadline .tiny {
-  color: var(--text-muted);
-}
-
-.days {
-  font-weight: 800;
-}
-</style>

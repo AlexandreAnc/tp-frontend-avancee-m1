@@ -77,14 +77,14 @@ async function onSaved() {
       </template>
     </PageHeader>
 
-    <main class="page routines-page">
-      <div class="stack col-main">
+    <main class="page flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <div class="flex flex-col gap-3 *:min-w-0">
         <p v-if="error" class="alert alert-error">{{ error }}</p>
 
         <template v-if="editing">
           <h2 class="section-label">{{ editing.id ? 'Modifier la routine' : 'Créer une routine' }}</h2>
           <RoutineEditor :key="editing.id ?? editing.name" :initial="editing" @saved="onSaved" @cancel="editing = null" />
-          <button v-if="editing.id" class="text-btn danger" type="button" @click="remove">Supprimer la routine</button>
+          <button v-if="editing.id" class="text-btn self-center text-danger" type="button" @click="remove">Supprimer la routine</button>
         </template>
 
         <RoutineRunResult
@@ -95,7 +95,7 @@ async function onSaved() {
           @edit="edit(routines.find((routine) => routine.id === lastResult?.routineId)!)"
         />
 
-        <section class="section">
+        <section class="flex flex-col gap-3">
           <h2 class="section-label">Mes routines</h2>
           <RoutineCard
             v-for="routine in routines"
@@ -114,56 +114,17 @@ async function onSaved() {
         </section>
       </div>
 
-      <section class="section col-side">
+      <section class="flex flex-col gap-3">
         <h2 class="section-label">Modèles</h2>
-        <button v-for="template in ROUTINE_TEMPLATES" :key="template.name" type="button" class="card template" @click="startFrom(template)">
+        <button v-for="template in ROUTINE_TEMPLATES" :key="template.name" type="button" class="card flex w-full cursor-pointer items-center gap-3 text-left" @click="startFrom(template)">
           <span class="icon-tile" :class="ROUTINE_ICON_TONES[template.icon]"><AppIcon :name="template.icon" :size="14" /></span>
-          <span class="grow">
-            <strong>{{ template.name }}</strong>
-            <span class="small muted">{{ template.description }}{{ template.schedule ? ` · ${describeSchedule(template.schedule)}` : '' }}</span>
+          <span class="flex min-w-0 flex-1 flex-col">
+            <strong class="font-extrabold">{{ template.name }}</strong>
+            <span class="text-xs text-muted">{{ template.description }}{{ template.schedule ? ` · ${describeSchedule(template.schedule)}` : '' }}</span>
           </span>
-          <AppIcon name="plus" :size="12" class="muted" />
+          <AppIcon name="plus" :size="12" class="text-muted" />
         </button>
       </section>
     </main>
   </div>
 </template>
-
-<style scoped>
-.routines-page {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.template {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-}
-
-.template .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.template strong {
-  font-weight: 800;
-}
-
-.danger {
-  align-self: center;
-  color: var(--danger);
-}
-
-@media (min-width: 1024px) {
-  .routines-page {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
-  }
-}
-</style>

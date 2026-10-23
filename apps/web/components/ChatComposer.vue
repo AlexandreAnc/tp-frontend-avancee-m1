@@ -47,13 +47,13 @@ onMounted(() => textarea.value?.focus());
 </script>
 
 <template>
-  <div class="composer-wrap">
+  <div class="flex flex-col gap-2.5">
     <div v-if="suggestions?.length" class="chips">
       <button v-for="suggestion in suggestions" :key="suggestion" class="chip" type="button" @click="emit('send', suggestion)">{{ suggestion }}</button>
     </div>
     <p v-if="error" class="alert alert-error">{{ error }}</p>
-    <form class="composer" @submit.prevent="submit">
-      <button class="attach" type="button" :disabled="uploading" aria-label="Joindre un document" @click="fileInput?.click()">
+    <form class="flex items-center gap-2 rounded-lg border bg-surface py-1.5 pr-1.5 pl-3 focus-within:border-primary" @submit.prevent="submit">
+      <button class="inline-flex cursor-pointer bg-transparent px-1.5 py-px text-muted" type="button" :disabled="uploading" aria-label="Joindre un document" @click="fileInput?.click()">
         <span v-if="uploading" class="spinner" />
         <AppIcon v-else name="paperclip" :size="16" />
       </button>
@@ -64,75 +64,12 @@ onMounted(() => textarea.value?.focus());
         ref="textarea"
         v-model="content"
         rows="1"
+        class="max-h-[140px] min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm outline-none [field-sizing:content]"
         :maxlength="MAX_CHAT_MESSAGE_LENGTH"
         :placeholder="placeholder ?? 'Écrire à l’agent…'"
         @keydown="onKeydown"
       />
-      <button class="send" type="submit" :disabled="!canSend" aria-label="Envoyer"><AppIcon name="arrow-up" :size="14" /></button>
+      <button class="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-primary text-white disabled:cursor-not-allowed disabled:bg-border disabled:text-muted" type="submit" :disabled="!canSend" aria-label="Envoyer"><AppIcon name="arrow-up" :size="14" /></button>
     </form>
   </div>
 </template>
-
-<style scoped>
-.composer-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.composer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 6px 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.composer:focus-within {
-  border-color: var(--primary);
-}
-
-.composer textarea {
-  flex: 1;
-  min-width: 0;
-  max-height: 140px;
-  padding: 8px 4px;
-  border: none;
-  background: none;
-  resize: none;
-  font-size: 14px;
-  line-height: 20px;
-  outline: none;
-  field-sizing: content;
-}
-
-.attach {
-  display: inline-flex;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: var(--radius);
-  background: var(--primary);
-  color: #fff;
-  cursor: pointer;
-}
-
-.send:disabled {
-  background: var(--border);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-</style>

@@ -35,97 +35,46 @@ const chips = computed(() => {
 </script>
 
 <template>
-  <article class="file" :class="[file.status, { selected }]" @click="emit('select', file.id)">
-    <div class="main">
+  <article
+    class="flex cursor-pointer flex-col gap-3 rounded-lg border bg-surface p-[15px]"
+    :class="selected
+      ? 'border-ink ring-1 ring-ink'
+      : file.status === 'processing'
+        ? 'border-[color-mix(in_srgb,var(--color-info)_25%,var(--color-border))]'
+        : file.status === 'failed' && 'border-[color-mix(in_srgb,var(--color-danger)_20%,var(--color-border))]'"
+    @click="emit('select', file.id)"
+  >
+    <div class="flex items-center gap-3">
       <FileTypeIcon :mime-type="file.mimeType" />
-      <div class="grow">
-        <strong class="name">{{ file.name }}</strong>
-        <span class="small sub" :class="{ error: file.status === 'failed' }">{{ fileSubtitle(file) }}</span>
+      <div class="flex min-w-0 flex-1 flex-col">
+        <strong class="font-extrabold [word-break:break-word]">{{ file.name }}</strong>
+        <span class="text-xs" :class="file.status === 'failed' ? 'font-semibold text-danger' : 'text-muted'">{{ fileSubtitle(file) }}</span>
       </div>
-      <FileStatusBadge :status="file.status" />
-      <button class="icon-btn eye" type="button" :aria-label="`Aperçu de ${file.name}`" @click.stop="emit('preview', file.id)"><AppIcon name="eye" :size="14" /></button>
+      <!-- Rangée compacte du drive (≤ 480 px) : aperçu et statut « Analysé » sont dans le menu et le détail, le nom garde la place. -->
+      <FileStatusBadge :status="file.status" class="max-[480px]:[&.tone-primary]:hidden" />
+      <button class="icon-btn size-8 max-[480px]:hidden" type="button" :aria-label="`Aperçu de ${file.name}`" @click.stop="emit('preview', file.id)"><AppIcon name="eye" :size="14" /></button>
       <slot name="actions" />
     </div>
 
-    <div v-if="file.status === 'processing'" class="progress" aria-hidden="true"><span /></div>
-    <div v-if="chips.length" class="chips-row">
-      <span v-for="chip in chips" :key="chip.label" class="tag" :class="chip.tone">{{ chip.label }}</span>
+    <div v-if="file.status === 'processing'" class="h-1.5 overflow-hidden rounded-full bg-info-soft" aria-hidden="true"><span class="indeterminate block h-full w-2/5 rounded-[inherit] bg-info" /></div>
+    <div v-if="chips.length" class="flex flex-wrap gap-1.5">
+      <span
+        v-for="chip in chips"
+        :key="chip.label"
+        class="rounded-tag px-2 pt-[3px] pb-[4.5px] text-[12px] leading-[17px] font-bold"
+        :class="chip.tone === 'deadline' ? 'bg-danger-soft text-danger' : 'bg-surface-muted'"
+      >{{ chip.label }}</span>
     </div>
-    <div v-if="file.status === 'failed'" class="buttons" @click.stop>
-      <button class="btn btn-sm" type="button" @click="emit('delete', file.id)">Corbeille</button>
-      <button class="btn btn-sm btn-danger" type="button" @click="emit('reindex', file.id)"><AppIcon name="rotate-right" :size="12" />Réessayer</button>
+    <div v-if="file.status === 'failed'" class="grid grid-cols-[1fr_1fr] gap-2" @click.stop>
+      <button class="btn btn-sm min-h-9" type="button" @click="emit('delete', file.id)">Corbeille</button>
+      <button class="btn btn-sm btn-danger min-h-9" type="button" @click="emit('reindex', file.id)"><AppIcon name="rotate-right" :size="12" />Réessayer</button>
     </div>
   </article>
 </template>
 
 <style scoped>
-.file {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 15px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.file.processing {
-  border-color: color-mix(in srgb, var(--info) 25%, var(--border));
-}
-
-.file.failed {
-  border-color: color-mix(in srgb, var(--danger) 20%, var(--border));
-}
-
-.file.selected {
-  border-color: var(--ink);
-  box-shadow: 0 0 0 1px var(--ink);
-}
-
-.main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.main .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.eye {
-  width: 32px;
-  height: 32px;
-}
-
-.name {
-  font-weight: 800;
-  word-break: break-word;
-}
-
-.sub {
-  color: var(--text-muted);
-}
-
-.sub.error {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.progress {
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--info-soft);
-  overflow: hidden;
-}
-
-.progress span {
-  display: block;
-  width: 40%;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--info);
+/* Barre de progression indéterminée : keyframes, non exprimables en utilitaires. */
+.indeterminate {
   animation: indeterminate 1.4s ease-in-out infinite;
 }
 
@@ -137,35 +86,5 @@ const chips = computed(() => {
   to {
     transform: translateX(250%);
   }
-}
-
-.chips-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag {
-  padding: 3px 8px 4.5px;
-  border-radius: 6px;
-  background: var(--surface-muted);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 17px;
-}
-
-.tag.deadline {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.buttons .btn {
-  min-height: 36px;
 }
 </style>

@@ -142,6 +142,12 @@ function deadlineTone(days: number) {
   return '';
 }
 
+const DOT = { danger: 'bg-danger', info: 'bg-info', primary: 'bg-primary' } as const;
+function dotClass(day: Date) {
+  const tone = dotTone(day);
+  return tone ? DOT[tone] : '';
+}
+
 const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 </script>
 
@@ -156,96 +162,113 @@ const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
         <div class="segmented" role="tablist">
           <button v-for="item in VIEWS" :key="item.id" type="button" role="tab" :aria-selected="view === item.id" :class="{ active: view === item.id }" @click="view = item.id">{{ item.label }}</button>
         </div>
-        <div v-if="view === 'day' || view === 'week'" class="week-strip">
+        <div v-if="view === 'day' || view === 'week'" class="grid grid-cols-[repeat(7,1fr)] gap-1">
           <button
             v-for="day in weekDays"
             :key="day.getTime()"
             type="button"
-            class="day-pill"
-            :class="{ active: day.getTime() === selected.getTime(), past: day < startOfDay(new Date()) }"
+            class="flex cursor-pointer flex-col items-center gap-0.5 rounded-md py-2"
+            :class="{ 'bg-primary text-white': day.getTime() === selected.getTime() }"
             @click="selected = day; view = 'day'"
           >
-            <span class="dow">{{ WEEKDAY.format(day).replace('.', '').toUpperCase() }}</span>
-            <span class="num">{{ day.getDate() }}</span>
-            <span class="dot" :class="dotTone(day)" />
+            <span class="text-[10px] font-bold" :class="day.getTime() === selected.getTime() ? 'text-white' : 'text-muted'">{{ WEEKDAY.format(day).replace('.', '').toUpperCase() }}</span>
+            <span class="text-[16px] font-extrabold" :class="day.getTime() === selected.getTime() ? 'text-white' : day < startOfDay(new Date()) ? 'text-muted' : ''">{{ day.getDate() }}</span>
+            <span class="size-[5px] rounded-full" :class="day.getTime() === selected.getTime() ? 'bg-white' : dotClass(day)" />
           </button>
         </div>
       </template>
     </PageHeader>
 
-    <main class="page planning">
-      <div class="stack col-main">
+    <main class="page lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <div class="flex flex-col gap-3 *:min-w-0">
         <MorningDigest v-if="isToday && view === 'day'" :today="todayItems" :week="weekAhead" :pending="pending" />
         <p v-if="!agenda?.calendarConnected" class="alert alert-info">
           <AppIcon name="calendar" :size="14" />
-          <span class="grow">Google Agenda n'est pas connecté : seuls vos rappels et échéances apparaissent.</span>
-          <NuxtLink to="/settings" class="strong">Connecter</NuxtLink>
+          <span class="min-w-0 flex-1">Google Agenda n'est pas connecté : seuls vos rappels et échéances apparaissent.</span>
+          <NuxtLink to="/settings" class="font-extrabold">Connecter</NuxtLink>
         </p>
         <p v-if="error" class="alert alert-error">{{ error }}</p>
 
         <!-- Jour -->
-        <section v-if="view === 'day'" class="section">
-          <div class="section-head">
+        <section v-if="view === 'day'" class="flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
             <h2>{{ formatDayLong(selected) }}</h2>
-            <span class="small muted">{{ dayItems.length }} élément{{ dayItems.length > 1 ? 's' : '' }}</span>
+            <span class="text-xs text-muted">{{ dayItems.length }} élément{{ dayItems.length > 1 ? 's' : '' }}</span>
           </div>
-          <div class="day-grid card">
-            <div class="grid-body" :style="{ height: `${hours.length * HOUR_HEIGHT}px` }">
-              <div v-for="hour in hours" :key="hour" class="hour" :style="{ top: `${(hour - firstHour) * HOUR_HEIGHT}px` }">
-                <span>{{ String(hour).padStart(2, '0') }}:00</span>
+          <div class="card py-3 pr-3 pl-0">
+            <div class="relative ml-[52px]" :style="{ height: `${hours.length * HOUR_HEIGHT}px` }">
+              <div v-for="hour in hours" :key="hour" class="absolute right-0 -left-[52px] h-0 border-t" :style="{ top: `${(hour - firstHour) * HOUR_HEIGHT}px` }">
+                <span class="absolute -top-2 left-3 text-[11px] font-bold text-muted">{{ String(hour).padStart(2, '0') }}:00</span>
               </div>
-              <div v-if="isToday && nowLine >= 0 && nowLine <= hours.length * HOUR_HEIGHT" class="now" :style="{ top: `${nowLine}px` }" />
-              <div v-for="event in timedEvents" :key="event.id" class="event" :style="position(event.start, event.end)">
-                <strong class="ellipsis">{{ event.title }}</strong>
-                <span class="tiny">{{ formatTime(event.start) }}{{ event.end ? ` – ${formatTime(event.end)}` : '' }}{{ event.location ? ` · ${event.location}` : '' }}</span>
+              <div
+                v-if="isToday && nowLine >= 0 && nowLine <= hours.length * HOUR_HEIGHT"
+                class="absolute right-0 -left-1.5 h-0.5 bg-danger before:absolute before:-top-[3px] before:left-0 before:size-2 before:rounded-full before:bg-danger"
+                :style="{ top: `${nowLine}px` }"
+              />
+              <div
+                v-for="event in timedEvents"
+                :key="event.id"
+                class="absolute right-1 left-1 flex flex-col overflow-hidden rounded-sm border-l-[3px] border-info bg-info-soft px-2.5 py-1.5 text-[12px]"
+                :style="position(event.start, event.end)"
+              >
+                <strong class="truncate">{{ event.title }}</strong>
+                <span class="text-2xs font-bold text-info">{{ formatTime(event.start) }}{{ event.end ? ` – ${formatTime(event.end)}` : '' }}{{ event.location ? ` · ${event.location}` : '' }}</span>
               </div>
               <div
                 v-for="item in dayItems.filter((entry) => entry.kind === 'reminder')"
                 :key="item.id"
-                class="event reminder"
+                class="absolute right-1 left-1 flex flex-col overflow-hidden rounded-sm border-l-[3px] border-amber bg-warning-soft px-2.5 py-1.5 text-[12px]"
                 :style="position(item.start, null)"
               >
-                <strong class="ellipsis"><AppIcon name="bell" :size="10" /> {{ item.title }}</strong>
+                <strong class="truncate"><AppIcon name="bell" :size="10" /> {{ item.title }}</strong>
               </div>
             </div>
           </div>
-          <div v-for="item in dayItems.filter((entry) => entry.kind === 'deadline' || (entry.kind === 'event' && entry.allDay))" :key="item.id" class="allday">
+          <div
+            v-for="item in dayItems.filter((entry) => entry.kind === 'deadline' || (entry.kind === 'event' && entry.allDay))"
+            :key="item.id"
+            class="flex items-center gap-2 rounded-md bg-danger-soft px-3 py-2.5 text-[12px] font-bold text-danger"
+          >
             <AppIcon :name="item.kind === 'deadline' ? 'hourglass' : 'calendar'" :size="12" />{{ item.title }}
           </div>
         </section>
 
         <!-- Mois -->
-        <section v-else-if="view === 'month'" class="section">
-          <div class="section-head">
+        <section v-else-if="view === 'month'" class="flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
             <button class="icon-btn" type="button" aria-label="Mois précédent" @click="shift(-1)"><AppIcon name="arrow-left" /></button>
             <h2>{{ monthLabel }}</h2>
-            <button class="icon-btn flip" type="button" aria-label="Mois suivant" @click="shift(1)"><AppIcon name="arrow-left" /></button>
+            <button class="icon-btn -scale-x-100" type="button" aria-label="Mois suivant" @click="shift(1)"><AppIcon name="arrow-left" /></button>
           </div>
-          <div class="month card">
-            <span v-for="(label, index) in ['L', 'M', 'M', 'J', 'V', 'S', 'D']" :key="index" class="mhead tiny muted strong">{{ label }}</span>
+          <div class="card grid grid-cols-[repeat(7,1fr)] gap-1 p-3">
+            <span v-for="(label, index) in ['L', 'M', 'M', 'J', 'V', 'S', 'D']" :key="index" class="text-center text-2xs font-extrabold text-muted">{{ label }}</span>
             <button
               v-for="day in monthDays"
               :key="day.getTime()"
               type="button"
-              class="mday"
-              :class="{ out: day.getMonth() !== selected.getMonth(), today: day.getTime() === startOfDay(new Date()).getTime() }"
+              class="flex cursor-pointer flex-col items-center gap-[3px] rounded-sm py-2 font-bold"
+              :class="{
+                'opacity-50': day.getMonth() !== selected.getMonth(),
+                'text-muted': day.getMonth() !== selected.getMonth() && day.getTime() !== startOfDay(new Date()).getTime(),
+                'bg-primary text-white': day.getTime() === startOfDay(new Date()).getTime(),
+              }"
               @click="selected = day; view = 'day'"
             >
               {{ day.getDate() }}
-              <span class="dot" :class="dotTone(day)" />
+              <span class="size-[5px] rounded-full" :class="dotClass(day)" />
             </button>
           </div>
         </section>
 
         <!-- Semaine / Liste -->
-        <section v-else class="section">
-          <div v-for="group in groupedDays" :key="group.day.getTime()" class="stack-sm">
-            <h2 class="small">{{ formatDayLong(group.day) }}</h2>
+        <section v-else class="flex flex-col gap-3">
+          <div v-for="group in groupedDays" :key="group.day.getTime()" class="flex flex-col gap-2">
+            <h2 class="text-xs">{{ formatDayLong(group.day) }}</h2>
             <div class="card card-flush">
               <div v-for="item in group.items" :key="`${item.kind}-${item.id}`" class="list-row">
                 <AgendaBadge :item="item" />
               </div>
-              <p v-if="!group.items.length" class="list-row small muted">Rien de prévu</p>
+              <p v-if="!group.items.length" class="list-row text-xs text-muted">Rien de prévu</p>
             </div>
           </div>
           <div v-if="!groupedDays.length" class="empty-state">
@@ -256,22 +279,29 @@ const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
         </section>
       </div>
 
-      <div class="stack col-side">
-        <section class="section">
-          <div class="section-head">
+      <div class="flex flex-col gap-3 *:min-w-0">
+        <section class="flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-2">
             <h2>Rappels</h2>
             <button class="text-btn" type="button" @click="reminderDialog?.open({ date: selected })">+ Ajouter</button>
           </div>
           <div v-if="reminders.length" class="card card-flush">
-            <div v-for="reminder in reminders" :key="reminder.id" class="list-row reminder-row" :class="{ done: reminder.status === 'done' }">
-              <button class="check" type="button" :aria-pressed="reminder.status === 'done'" :aria-label="reminder.status === 'done' ? 'Marquer comme à faire' : 'Marquer comme fait'" @click="toggleReminder(reminder)">
+            <div v-for="reminder in reminders" :key="reminder.id" class="list-row">
+              <button
+                class="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-tag border-[1.5px] text-white"
+                :class="reminder.status === 'done' ? 'border-primary bg-primary' : 'bg-surface'"
+                type="button"
+                :aria-pressed="reminder.status === 'done'"
+                :aria-label="reminder.status === 'done' ? 'Marquer comme à faire' : 'Marquer comme fait'"
+                @click="toggleReminder(reminder)"
+              >
                 <AppIcon v-if="reminder.status === 'done'" name="check" :size="10" />
               </button>
-              <div class="grow">
-                <strong class="ellipsis">{{ reminder.title }}</strong>
-                <span class="tiny muted">{{ daysUntil(reminder.start) === 0 ? 'Aujourd’hui' : formatDayLong(reminder.start) }} · {{ formatTime(reminder.start) }}</span>
+              <div class="flex min-w-0 flex-1 flex-col">
+                <strong class="truncate font-bold" :class="{ 'text-muted line-through': reminder.status === 'done' }">{{ reminder.title }}</strong>
+                <span class="text-2xs text-muted">{{ daysUntil(reminder.start) === 0 ? 'Aujourd’hui' : formatDayLong(reminder.start) }} · {{ formatTime(reminder.start) }}</span>
               </div>
-              <button class="icon-btn small-btn" type="button" aria-label="Supprimer le rappel" @click="removeReminder(reminder.id)"><AppIcon name="trash" :size="12" /></button>
+              <button class="icon-btn size-7" type="button" aria-label="Supprimer le rappel" @click="removeReminder(reminder.id)"><AppIcon name="trash" :size="12" /></button>
             </div>
           </div>
           <div v-else class="empty-state">
@@ -281,319 +311,32 @@ const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
           </div>
         </section>
 
-        <section class="section">
+        <section class="flex flex-col gap-3">
           <h2>Échéances</h2>
-          <NuxtLink v-for="deadline in deadlines" :key="deadline.id" :to="{ path: '/drive', query: { q: deadline.fileName } }" class="card deadline-card">
-            <span class="jtile" :class="deadlineTone(daysUntil(deadline.start))">
-              <span class="tiny">J‑</span>{{ daysUntil(deadline.start) }}
+          <NuxtLink v-for="deadline in deadlines" :key="deadline.id" :to="{ path: '/drive', query: { q: deadline.fileName } }" class="card flex items-center gap-3 font-normal text-text">
+            <!-- Les teintes d'urgence sont recouvertes par le fond neutre de la tuile (rendu d'origine conservé). -->
+            <span class="inline-flex size-11 shrink-0 flex-col items-center justify-center rounded-md bg-surface-muted text-[16px] leading-4 font-extrabold text-muted" :class="deadlineTone(daysUntil(deadline.start))">
+              <span class="text-2xs">J‑</span>{{ daysUntil(deadline.start) }}
             </span>
-            <div class="grow">
-              <strong>{{ deadline.title }}</strong>
-              <span class="tiny muted row"><AppIcon name="file-pdf" :size="10" />{{ deadline.fileName }} · {{ formatShortDate(deadline.start) }}</span>
+            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+              <strong class="font-extrabold">{{ deadline.title }}</strong>
+              <span class="flex items-center gap-2 text-2xs text-muted"><AppIcon name="file-pdf" :size="10" />{{ deadline.fileName }} · {{ formatShortDate(deadline.start) }}</span>
             </div>
-            <AppIcon name="chevron-right" :size="12" class="muted" />
+            <AppIcon name="chevron-right" :size="12" class="text-muted" />
           </NuxtLink>
-          <p v-if="!deadlines.length" class="small muted">Aucune échéance repérée dans vos documents pour les 60 prochains jours.</p>
+          <p v-if="!deadlines.length" class="text-xs text-muted">Aucune échéance repérée dans vos documents pour les 60 prochains jours.</p>
         </section>
       </div>
     </main>
 
-    <button class="fab" type="button" aria-label="Ajouter un rappel" @click="reminderDialog?.open({ date: selected })"><AppIcon name="plus" :size="16" /></button>
+    <button
+      class="fixed right-4 bottom-[calc(var(--nav-height)+16px+env(safe-area-inset-bottom))] z-15 inline-flex size-14 cursor-pointer items-center justify-center rounded-lg bg-primary text-white shadow-primary lg:right-6 lg:bottom-6"
+      type="button"
+      aria-label="Ajouter un rappel"
+      @click="reminderDialog?.open({ date: selected })"
+    >
+      <AppIcon name="plus" :size="16" />
+    </button>
     <ReminderDialog ref="reminderDialog" :default-date="selected" @created="refresh(); refreshUpcoming()" />
   </div>
 </template>
-
-<style scoped>
-.week-strip {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.day-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 0;
-  border: none;
-  border-radius: var(--radius);
-  background: none;
-  cursor: pointer;
-}
-
-.day-pill .dow {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.day-pill .num {
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.day-pill.past .num {
-  color: var(--text-muted);
-}
-
-.day-pill.active {
-  background: var(--primary);
-  color: #fff;
-}
-
-.day-pill.active .dow,
-.day-pill.active .num {
-  color: #fff;
-}
-
-.dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-}
-
-.dot.info {
-  background: var(--info);
-}
-
-.dot.danger {
-  background: var(--danger);
-}
-
-.dot.primary {
-  background: var(--primary);
-}
-
-.day-pill.active .dot {
-  background: #fff;
-}
-
-.planning {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.day-grid {
-  padding: 12px 12px 12px 0;
-}
-
-.grid-body {
-  position: relative;
-  margin-left: 52px;
-}
-
-.hour {
-  position: absolute;
-  left: -52px;
-  right: 0;
-  height: 0;
-  border-top: 1px solid var(--border);
-}
-
-.hour span {
-  position: absolute;
-  top: -8px;
-  left: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.now {
-  position: absolute;
-  left: -6px;
-  right: 0;
-  height: 2px;
-  background: var(--danger);
-}
-
-.now::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-
-.event {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  display: flex;
-  flex-direction: column;
-  padding: 6px 10px;
-  border-left: 3px solid var(--info);
-  border-radius: var(--radius-sm);
-  background: var(--info-soft);
-  overflow: hidden;
-  font-size: 12px;
-}
-
-.event .tiny {
-  color: var(--info);
-  font-weight: 700;
-}
-
-.event.reminder {
-  border-left-color: var(--amber);
-  background: var(--warning-soft);
-}
-
-.allday {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.flip {
-  transform: scaleX(-1);
-}
-
-.month {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  padding: 12px;
-}
-
-.mhead {
-  text-align: center;
-}
-
-.mday {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 8px 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.mday.out {
-  color: var(--text-muted);
-  opacity: 0.5;
-}
-
-.mday.today {
-  background: var(--primary);
-  color: #fff;
-}
-
-.reminder-row .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.reminder-row strong {
-  font-weight: 700;
-}
-
-.reminder-row.done strong {
-  color: var(--text-muted);
-  text-decoration: line-through;
-}
-
-.check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border: 1.5px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: #fff;
-  cursor: pointer;
-}
-
-.done .check {
-  border-color: var(--primary);
-  background: var(--primary);
-}
-
-.small-btn {
-  width: 28px;
-  height: 28px;
-}
-
-.deadline-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text);
-  font-weight: 400;
-}
-
-.deadline-card .grow {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.deadline-card strong {
-  font-weight: 800;
-}
-
-.jtile {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 16px;
-}
-
-.fab {
-  position: fixed;
-  right: 16px;
-  bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border: none;
-  border-radius: var(--radius-lg);
-  background: var(--primary);
-  color: #fff;
-  box-shadow: var(--shadow-primary);
-  cursor: pointer;
-  z-index: 15;
-}
-
-@media (min-width: 1024px) {
-  .planning {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    align-items: start;
-  }
-
-  .fab {
-    bottom: 24px;
-    right: 24px;
-  }
-}
-</style>

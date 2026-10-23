@@ -19,25 +19,9 @@ const detail = computed(() => {
 </script>
 
 <template>
-  <span class="icon-tile" :class="VISUAL[item.kind].tone"><AppIcon :name="VISUAL[item.kind].icon" :size="13" /></span>
-  <span class="grow agenda-text">
-    <strong class="ellipsis">{{ item.title }}</strong>
-    <span class="tiny muted ellipsis">{{ detail }}</span>
+  <span class="icon-tile size-9" :class="VISUAL[item.kind].tone"><AppIcon :name="VISUAL[item.kind].icon" :size="13" /></span>
+  <span class="flex min-w-0 flex-1 flex-col">
+    <strong class="truncate font-bold">{{ item.title }}</strong>
+    <span class="truncate text-2xs text-muted">{{ detail }}</span>
   </span>
 </template>
-
-<style scoped>
-.icon-tile {
-  width: 36px;
-  height: 36px;
-}
-
-.agenda-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.agenda-text strong {
-  font-weight: 700;
-}
-</style>

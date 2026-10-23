@@ -51,17 +51,17 @@ async function decide(decision: 'approve' | 'reject') {
 </script>
 
 <template>
-  <article class="action" :class="{ compact }">
-    <div class="main">
-      <span class="icon-tile" :class="visual.tone"><AppIcon :name="visual.icon" :size="14" /></span>
-      <div class="grow">
-        <div v-if="!compact" class="row badges">
+  <article class="flex flex-col gap-3" :class="compact ? 'rounded-md bg-surface-muted p-3.5' : 'rounded-lg border bg-surface p-4'">
+    <div class="flex gap-3">
+      <span class="icon-tile size-9" :class="visual.tone"><AppIcon :name="visual.icon" :size="14" /></span>
+      <div class="min-w-0 flex-1">
+        <div v-if="!compact" class="mb-1 flex items-center gap-2">
           <span class="badge" :class="status.tone"><AppIcon :name="status.icon" :size="10" />{{ status.label }}</span>
           <span v-if="action.risk === 'sensitive'" class="badge tone-danger">Sensible</span>
         </div>
-        <h3 class="title">{{ action.summary }}</h3>
-        <p v-if="detail" class="tiny muted">{{ detail }}</p>
-        <p v-if="action.status === 'pending' && !compact" class="tiny muted meta">
+        <h3 class="text-[14px] leading-5" :class="compact ? 'font-bold' : 'font-extrabold'">{{ action.summary }}</h3>
+        <p v-if="detail" class="text-2xs text-muted">{{ detail }}</p>
+        <p v-if="action.status === 'pending' && !compact" class="mt-1.5 flex items-center gap-1.5 text-2xs text-muted">
           <AppIcon name="comments" :size="10" />
           Expire {{ formatRelative(action.expiresAt) }} · sans validation, rien ne sera fait
         </p>
@@ -70,80 +70,14 @@ async function decide(decision: 'approve' | 'reject') {
 
     <p v-if="action.error" class="alert alert-error">{{ action.error }}</p>
     <p v-if="error" class="alert alert-error" role="alert">{{ error }}</p>
-    <a v-if="link" :href="link" target="_blank" rel="noopener" class="small">Voir dans Google Agenda</a>
+    <a v-if="link" :href="link" target="_blank" rel="noopener" class="text-xs">Voir dans Google Agenda</a>
 
-    <div v-if="action.status === 'pending'" class="buttons">
-      <button class="btn" type="button" :disabled="busy" @click="decide('reject')">Refuser</button>
-      <button class="btn btn-ink" type="button" :disabled="busy" @click="decide('approve')">
-        <AppIcon v-if="action.risk === 'sensitive'" name="face-smile" :size="14" class="faceid" />
+    <div v-if="action.status === 'pending'" class="grid grid-cols-[1fr_1fr] gap-2">
+      <button class="btn" :class="{ 'min-h-8 rounded-sm text-[12px]': compact }" type="button" :disabled="busy" @click="decide('reject')">Refuser</button>
+      <button class="btn btn-ink" :class="{ 'min-h-8 rounded-sm text-[12px]': compact }" type="button" :disabled="busy" @click="decide('approve')">
+        <AppIcon v-if="action.risk === 'sensitive'" name="face-smile" :size="14" class="text-primary-bright" />
         Valider
       </button>
     </div>
   </article>
 </template>
-
-<style scoped>
-.action {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.action.compact {
-  padding: 14px;
-  border: none;
-  background: var(--surface-muted);
-  border-radius: var(--radius);
-}
-
-.main {
-  display: flex;
-  gap: 12px;
-}
-
-.main .icon-tile {
-  width: 36px;
-  height: 36px;
-}
-
-.badges {
-  margin-bottom: 4px;
-}
-
-.title {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 800;
-}
-
-.compact .title {
-  font-weight: 700;
-}
-
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.compact .buttons .btn {
-  min-height: 32px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-}
-
-.faceid {
-  color: var(--primary-bright);
-}
-</style>

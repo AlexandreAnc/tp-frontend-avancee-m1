@@ -1,3 +1,5 @@
+import tailwindcss from '@tailwindcss/vite';
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
   devtools: { enabled: false },
@@ -7,6 +9,9 @@ export default defineNuxtConfig({
   ssr: false,
   modules: ['@vite-pwa/nuxt'],
   css: ['@fontsource-variable/manrope', '~/assets/css/main.css'],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 
   app: {
     head: {

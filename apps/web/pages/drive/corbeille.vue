@@ -79,7 +79,7 @@ function purgeLabel(file: TrashedFile) {
       </template>
     </PageHeader>
 
-    <main class="page stack trash-page">
+    <main class="page flex max-w-[860px] flex-col gap-3 *:min-w-0">
       <p class="alert alert-info">
         <AppIcon name="clock-rotate-left" :size="14" />
         Les fichiers restent {{ data?.retentionDays ?? 30 }} jours dans la corbeille, puis sont supprimés définitivement. Ils comptent dans vos {{ formatBytes(data?.quota.maxBytes ?? 0) }} tant que la corbeille n’est pas vidée.
@@ -87,12 +87,12 @@ function purgeLabel(file: TrashedFile) {
       <p v-if="error" class="alert alert-error" role="alert">{{ error }}</p>
       <p v-if="notice" class="alert alert-success" role="status"><AppIcon name="circle-check" :size="14" />{{ notice }}</p>
 
-      <div v-if="files.length" class="toolbar">
-        <label class="check-all small strong">
-          <input type="checkbox" :checked="allSelected" :indeterminate="selection.size > 0 && !allSelected" @change="selection = allSelected ? new Set() : new Set(files.map((file) => file.id))">
+      <div v-if="files.length" class="flex items-center gap-2">
+        <label class="inline-flex cursor-pointer items-center gap-2.5 text-xs font-extrabold">
+          <input type="checkbox" class="m-[3px] ml-1" :checked="allSelected" :indeterminate="selection.size > 0 && !allSelected" @change="selection = allSelected ? new Set() : new Set(files.map((file) => file.id))">
           {{ selection.size ? `${selection.size} sélectionné${selection.size > 1 ? 's' : ''}` : 'Tout sélectionner' }}
         </label>
-        <span class="grow" />
+        <span class="min-w-0 flex-1" />
         <template v-if="selection.size">
           <button class="btn btn-sm" type="button" @click="restore([...selection])"><AppIcon name="clock-rotate-left" :size="12" />Restaurer</button>
           <button class="btn btn-sm btn-danger" type="button" @click="deleteForever([...selection])">Supprimer</button>
@@ -100,15 +100,20 @@ function purgeLabel(file: TrashedFile) {
       </div>
 
       <div v-if="files.length" class="card card-flush">
-        <div v-for="file in files" :key="file.id" class="trash-row" :class="{ checked: selection.has(file.id) }">
-          <input type="checkbox" class="pick" :checked="selection.has(file.id)" :aria-label="`Sélectionner ${file.name}`" @change="toggle(file.id)">
+        <div
+          v-for="file in files"
+          :key="file.id"
+          class="flex items-center gap-3 px-3.5 py-3 not-first:border-t"
+          :class="{ 'bg-[color-mix(in_srgb,var(--color-info-soft)_50%,var(--color-surface))]': selection.has(file.id) }"
+        >
+          <input type="checkbox" class="m-[3px] ml-1 size-[18px] accent-ink" :checked="selection.has(file.id)" :aria-label="`Sélectionner ${file.name}`" @change="toggle(file.id)">
           <FileTypeIcon :mime-type="file.mimeType" :size="32" />
-          <span class="grow">
-            <strong class="ellipsis">{{ file.name }}</strong>
-            <span class="tiny muted ellipsis">{{ file.path || 'Mon drive' }} · {{ formatBytes(file.sizeBytes) }} · {{ purgeLabel(file) }}</span>
+          <span class="flex min-w-0 flex-1 flex-col">
+            <strong class="truncate font-extrabold">{{ file.name }}</strong>
+            <span class="truncate text-2xs text-muted">{{ file.path || 'Mon drive' }} · {{ formatBytes(file.sizeBytes) }} · {{ purgeLabel(file) }}</span>
           </span>
-          <button class="btn btn-sm" type="button" @click="restore([file.id])">Restaurer</button>
-          <button class="icon-btn small-btn" type="button" :aria-label="`Supprimer définitivement ${file.name}`" @click="deleteForever([file.id])"><AppIcon name="trash" :size="11" /></button>
+          <button class="btn btn-sm max-[480px]:hidden" type="button" @click="restore([file.id])">Restaurer</button>
+          <button class="icon-btn size-8" type="button" :aria-label="`Supprimer définitivement ${file.name}`" @click="deleteForever([file.id])"><AppIcon name="trash" :size="11" /></button>
         </div>
       </div>
       <div v-else class="empty-state">
@@ -119,64 +124,3 @@ function purgeLabel(file: TrashedFile) {
     </main>
   </div>
 </template>
-
-<style scoped>
-.trash-page {
-  max-width: 860px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.check-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.trash-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-}
-
-.trash-row + .trash-row {
-  border-top: 1px solid var(--border);
-}
-
-.trash-row.checked {
-  background: color-mix(in srgb, var(--info-soft) 50%, var(--surface));
-}
-
-.trash-row .grow {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.trash-row strong {
-  font-weight: 800;
-}
-
-.pick {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--ink);
-}
-
-.small-btn {
-  width: 32px;
-  height: 32px;
-}
-
-@media (max-width: 480px) {
-  .trash-row .btn {
-    display: none;
-  }
-}
-</style>

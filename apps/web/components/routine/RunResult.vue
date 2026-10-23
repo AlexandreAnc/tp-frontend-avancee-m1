@@ -11,139 +11,35 @@ const done = computed(() => props.run.steps.filter((step) => step.status !== 'fa
 const title = computed(() => ({ success: 'exécutée', partial: 'exécutée en partie', failed: 'a échoué' })[props.run.status]);
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1).replace('.', ',')} s`;
 const openUrl = computed(() => props.run.steps.find((step) => step.openUrl)?.openUrl ?? null);
+const HEAD_TONES = { success: 'bg-primary-soft', partial: 'bg-warning-soft', failed: 'bg-danger-soft' } as const;
+const ICON_TONES = { success: 'bg-primary', partial: 'bg-amber', failed: 'bg-danger' } as const;
+const MARK_TONES = { success: 'bg-primary', queued: 'bg-info', failed: 'bg-danger' } as const;
 </script>
 
 <template>
-  <section class="result" :class="run.status">
-    <header class="head">
-      <span class="status-icon"><AppIcon :name="run.status === 'success' ? 'check' : run.status === 'partial' ? 'circle-half' : 'xmark'" :size="16" /></span>
-      <div class="grow">
+  <section class="overflow-hidden rounded-lg border bg-surface">
+    <header class="flex items-center gap-3 p-4" :class="HEAD_TONES[run.status]">
+      <span class="inline-flex size-11 items-center justify-center rounded-full text-white" :class="ICON_TONES[run.status]"><AppIcon :name="run.status === 'success' ? 'check' : run.status === 'partial' ? 'circle-half' : 'xmark'" :size="16" /></span>
+      <div class="min-w-0 flex-1">
         <h2>« {{ name }} » {{ title }}</h2>
-        <p class="small muted">{{ formatTime(run.createdAt) }} · {{ done }}/{{ run.steps.length }} étapes · {{ seconds(run.durationMs) }}</p>
+        <p class="text-xs text-muted">{{ formatTime(run.createdAt) }} · {{ done }}/{{ run.steps.length }} étapes · {{ seconds(run.durationMs) }}</p>
       </div>
     </header>
-    <ul class="steps">
-      <li v-for="step in run.steps" :key="step.label" :class="step.status">
-        <span class="mark"><AppIcon :name="step.status === 'failed' ? 'xmark' : step.status === 'queued' ? 'clock' : 'check'" :size="10" /></span>
-        <span class="grow">
-          <strong>{{ step.label }}</strong>
-          <span v-if="step.error" class="small error">{{ step.error }}</span>
-          <span v-else-if="step.status === 'queued'" class="small muted">Transmis à l'agent</span>
+    <ul class="flex flex-col gap-3.5 p-4">
+      <li v-for="step in run.steps" :key="step.label" class="flex gap-2.5">
+        <span class="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-white" :class="MARK_TONES[step.status]"><AppIcon :name="step.status === 'failed' ? 'xmark' : step.status === 'queued' ? 'clock' : 'check'" :size="10" /></span>
+        <span class="flex min-w-0 flex-1 flex-col">
+          <strong class="font-bold">{{ step.label }}</strong>
+          <span v-if="step.error" class="text-xs text-danger">{{ step.error }}</span>
+          <span v-else-if="step.status === 'queued'" class="text-xs text-muted">Transmis à l'agent</span>
         </span>
-        <span class="small muted">{{ seconds(step.durationMs) }}</span>
+        <span class="text-xs text-muted">{{ seconds(step.durationMs) }}</span>
       </li>
     </ul>
-    <button v-if="run.status !== 'success'" class="btn btn-sm btn-danger retry" type="button" @click="emit('retry')"><AppIcon name="rotate-right" :size="12" />Relancer</button>
-    <div class="buttons">
+    <button v-if="run.status !== 'success'" class="btn btn-sm btn-danger mx-4 mb-4" type="button" @click="emit('retry')"><AppIcon name="rotate-right" :size="12" />Relancer</button>
+    <div class="grid grid-cols-[1fr_1fr] gap-2 px-4 pb-4">
       <button class="btn" type="button" @click="emit('edit')">Modifier la routine</button>
       <NuxtLink :to="openUrl ?? '/journal'" class="btn btn-ink">{{ openUrl ? 'Voir la réponse' : 'Voir le journal' }}</NuxtLink>
     </div>
   </section>
 </template>
-
-<style scoped>
-.result {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--primary-soft);
-}
-
-.partial .head {
-  background: var(--warning-soft);
-}
-
-.failed .head {
-  background: var(--danger-soft);
-}
-
-.status-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-}
-
-.partial .status-icon {
-  background: var(--amber);
-}
-
-.failed .status-icon {
-  background: var(--danger);
-}
-
-.steps {
-  list-style: none;
-  margin: 0;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.steps li {
-  display: flex;
-  gap: 10px;
-}
-
-.steps .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.steps strong {
-  font-weight: 700;
-}
-
-.mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-}
-
-.failed .mark,
-li.failed .mark {
-  background: var(--danger);
-}
-
-li.queued .mark {
-  background: var(--info);
-}
-
-li.success .mark {
-  background: var(--primary);
-}
-
-.error {
-  color: var(--danger);
-}
-
-.retry {
-  margin: 0 16px 16px;
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 0 16px 16px;
-}
-</style>

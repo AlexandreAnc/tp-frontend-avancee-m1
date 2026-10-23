@@ -13,6 +13,7 @@ N'ajoute pas de framework ou de librairie qui fait doublon avec cette liste. Tou
 - **Langage** : TypeScript partout, mode `strict`. Pas de `any` sans commentaire justificatif.
 - **Gestionnaire de paquets** : pnpm (workspaces).
 - **Web** : Nuxt (Vue 3, Composition API, `<script setup>`), serveur Nitro pour l'API.
+- **CSS** : Tailwind CSS v4 (plugin `@tailwindcss/vite`). Les tokens du design system (couleurs, rayons, ombres, police de la maquette Figma) sont déclarés une seule fois dans `@theme` (`apps/web/assets/css/main.css`) et utilisés via les classes utilitaires (`bg-surface`, `text-muted`, `rounded-lg`…). Pas d'autre framework CSS ni de librairie de composants UI.
 - **PWA** : `@vite-pwa/nuxt`.
 - **Base** : PostgreSQL + pgvector, via **Drizzle** (schéma et migrations dans `apps/web/server/db`).
 - **Auth** : Better Auth.
@@ -120,6 +121,7 @@ export const ALLOWED_MIME_TYPES = [
 - Migrations Drizzle générées, jamais modifiées à la main après merge.
 - Gestion d'erreurs explicite : erreurs typées côté serveur, messages compréhensibles côté utilisateur.
 - Tests : services serveur et outils de l'agent en priorité (Vitest).
+- Styles : classes Tailwind directement dans les templates. Pas de couleur, rayon ou ombre en dur (hex, `rgb()`, px arbitraires) : on passe par les tokens du `@theme` (`bg-night/45`, `rounded-lg`, `shadow-popover`…), ce qui garde le thème clair / sombre cohérent. Les briques de base du design system (`.btn`, `.input`, `.card`, `.chip`, `.badge`, `.switch`…) sont écrites une fois dans `@layer components` de `main.css` et se combinent avec des utilitaires ; tout autre motif répété devient un composant Vue, pas une classe `@apply`. Un bloc `<style scoped>` n'est accepté que pour ce que Tailwind exprime mal (keyframes, sélecteurs sur du contenu injecté ou des pseudo-éléments complexes).
 
 ## Avant de considérer une tâche terminée
 

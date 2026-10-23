@@ -100,24 +100,42 @@ defineExpose({ open });
 </script>
 
 <template>
-  <dialog ref="dialog" class="move" aria-labelledby="move-title" @click.self="dialog?.close()">
-    <div class="stack">
+  <dialog
+    ref="dialog"
+    class="m-auto w-[min(480px,calc(100%-24px))] rounded-xl border bg-surface p-5 text-text backdrop:bg-night/45"
+    aria-labelledby="move-title"
+    @click.self="dialog?.close()"
+  >
+    <div class="flex flex-col gap-3 *:min-w-0">
       <h2 id="move-title">{{ title }}</h2>
-      <div class="tree card card-flush" role="tree">
-        <button type="button" class="node" role="treeitem" :aria-selected="selected === null" :class="{ active: selected === null }" @click="selected = null">
+      <div class="card card-flush max-h-[50dvh] overflow-y-auto p-1.5" role="tree">
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-sm px-2.5 py-[9px] text-left font-bold"
+          :class="{ 'bg-ink text-on-ink': selected === null }"
+          role="treeitem"
+          :aria-selected="selected === null"
+          @click="selected = null"
+        >
           <AppIcon name="house" :size="13" />Mon drive (racine)
         </button>
-        <div v-for="row in rows" :key="row.folder.id" class="node-row" :style="{ paddingLeft: `${12 + row.depth * 18}px` }">
-          <button v-if="row.hasChildren" type="button" class="expand" :aria-label="expanded.has(row.folder.id) ? 'Replier' : 'Déplier'" @click="toggle(row.folder.id)">
-            <AppIcon name="chevron-down" :size="10" :class="{ closed: !expanded.has(row.folder.id) }" />
+        <div v-for="row in rows" :key="row.folder.id" class="flex items-center gap-0.5" :style="{ paddingLeft: `${12 + row.depth * 18}px` }">
+          <button
+            v-if="row.hasChildren"
+            type="button"
+            class="inline-flex size-5 shrink-0 cursor-pointer items-center justify-center text-muted"
+            :aria-label="expanded.has(row.folder.id) ? 'Replier' : 'Déplier'"
+            @click="toggle(row.folder.id)"
+          >
+            <AppIcon name="chevron-down" :size="10" :class="{ '-rotate-90': !expanded.has(row.folder.id) }" />
           </button>
-          <span v-else class="expand" />
+          <span v-else class="size-5 shrink-0" />
           <button
             type="button"
-            class="node"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-sm px-2.5 py-[9px] text-left font-bold disabled:cursor-not-allowed disabled:opacity-40"
+            :class="{ 'bg-ink text-on-ink': selected === row.folder.id }"
             role="treeitem"
             :aria-selected="selected === row.folder.id"
-            :class="{ active: selected === row.folder.id }"
             :disabled="excluded.has(row.folder.id)"
             @click="selected = row.folder.id"
           >
@@ -125,90 +143,15 @@ defineExpose({ open });
           </button>
         </div>
       </div>
-      <form class="row" @submit.prevent="createHere">
-        <input v-model="newName" class="input grow" maxlength="120" placeholder="Nouveau dossier ici…" aria-label="Nom du nouveau dossier">
+      <form class="flex items-center gap-2" @submit.prevent="createHere">
+        <input v-model="newName" class="input min-w-0 flex-1" maxlength="120" placeholder="Nouveau dossier ici…" aria-label="Nom du nouveau dossier">
         <button class="btn" type="submit" :disabled="!newName.trim()"><AppIcon name="plus" :size="12" />Créer</button>
       </form>
       <p v-if="error" class="alert alert-error">{{ error }}</p>
-      <div class="buttons">
+      <div class="grid grid-cols-[1fr_1fr] gap-2">
         <button class="btn" type="button" @click="dialog?.close()">Annuler</button>
         <button class="btn btn-ink" type="button" @click="confirm">Déplacer ici</button>
       </div>
     </div>
   </dialog>
 </template>
-
-<style scoped>
-.move {
-  width: min(480px, calc(100% - 24px));
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.move::backdrop {
-  background: rgb(28 31 35 / 0.45);
-}
-
-.tree {
-  max-height: 50dvh;
-  overflow-y: auto;
-  padding: 6px;
-}
-
-.node-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.node {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 9px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
-.node:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.node.active {
-  background: var(--ink);
-  color: var(--on-ink);
-}
-
-.expand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.closed {
-  transform: rotate(-90deg);
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-</style>

@@ -51,11 +51,11 @@ async function disconnect() {
       <p v-if="status" class="alert" :class="status.tone">{{ status.text }}</p>
 
       <!-- Non connecté -->
-      <section v-if="!home?.connected" class="card connect">
-        <span class="bulb"><AppIcon name="lightbulb" :size="28" /></span>
+      <section v-if="!home?.connected" class="card mx-auto flex max-w-[520px] flex-col items-center gap-3 rounded-xl p-6 text-center">
+        <span class="inline-flex size-[72px] items-center justify-center rounded-xl bg-warning-soft text-warning-bright"><AppIcon name="lightbulb" :size="28" /></span>
         <h2>Reliez vos lampes Philips Hue</h2>
-        <p class="muted small">Pilotez vos pièces et scènes depuis DashIA, par la discussion (« éteins le salon »), le panel ou un tag NFC.</p>
-        <ol class="steps small">
+        <p class="text-xs text-muted">Pilotez vos pièces et scènes depuis DashIA, par la discussion (« éteins le salon »), le panel ou un tag NFC.</p>
+        <ol class="flex flex-col gap-1.5 text-left text-xs text-muted">
           <li><strong>1.</strong> Connectez-vous avec votre compte Philips Hue.</li>
           <li><strong>2.</strong> DashIA appaire votre pont automatiquement.</li>
           <li><strong>3.</strong> Vos pièces apparaissent ici. Les lumières ne demandent pas de validation, et chaque action est annulable.</li>
@@ -65,20 +65,20 @@ async function disconnect() {
       </section>
 
       <template v-else>
-        <section v-if="home.scenes.length" class="section">
+        <section v-if="home.scenes.length" class="flex flex-col gap-3">
           <h2>Scènes{{ selectedRoom ? ` · ${selectedRoom.name}` : '' }}</h2>
           <div class="chips">
             <button v-for="item in roomScenes" :key="item.id" class="chip" type="button" :disabled="busy === item.id" @click="scene(item.id, item.name)">
               <AppIcon name="book-open" :size="12" />{{ item.name }}
             </button>
-            <span v-if="!roomScenes.length" class="small muted">Aucune scène pour cette pièce.</span>
+            <span v-if="!roomScenes.length" class="text-xs text-muted">Aucune scène pour cette pièce.</span>
           </div>
         </section>
 
-        <div class="home-layout">
-          <section class="section">
+        <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <section class="flex flex-col gap-3">
             <h2>Pièces</h2>
-            <div class="rooms">
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
               <HomeRoomTile
                 v-for="room in rooms"
                 :key="room.id"
@@ -91,7 +91,7 @@ async function disconnect() {
             </div>
             <template v-if="zones.length">
               <h2>Zones</h2>
-              <div class="rooms">
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
                 <HomeRoomTile v-for="zone in zones" :key="zone.id" :room="zone" :busy="busy === zone.id" @toggle="toggleRoom(zone)" />
               </div>
             </template>
@@ -102,21 +102,21 @@ async function disconnect() {
             </div>
           </section>
 
-          <section v-if="selectedRoom" class="card detail">
-            <div class="row between">
+          <section v-if="selectedRoom" class="card flex flex-col gap-4">
+            <div class="flex items-center justify-between gap-2">
               <h2>{{ selectedRoom.name }}</h2>
               <button class="switch" type="button" role="switch" :aria-checked="selectedRoom.on" :aria-label="`Allumer ${selectedRoom.name}`" @click="toggleRoom(selectedRoom)" />
             </div>
             <label class="field">
               <span class="field-label">Luminosité · {{ selectedRoom.brightness ?? 0 }} %</span>
-              <input class="range" type="range" min="1" max="100" :value="selectedRoom.brightness ?? 50" :disabled="!selectedRoom.on" @input="onDim">
+              <input class="m-0.5 w-full accent-primary" type="range" min="1" max="100" :value="selectedRoom.brightness ?? 50" :disabled="!selectedRoom.on" @input="onDim">
             </label>
-            <ul class="lights">
-              <li v-for="light in selectedRoom.lights" :key="light.id" :class="{ off: !light.reachable }">
-                <AppIcon name="lightbulb" :size="14" :class="light.on ? 'lit' : 'muted'" />
-                <span class="grow">
-                  <strong>{{ light.name }}</strong>
-                  <span class="tiny muted">{{ !light.reachable ? 'Injoignable' : light.on ? `Allumée${light.brightness ? ` · ${light.brightness} %` : ''}` : 'Éteinte' }}</span>
+            <ul class="flex flex-col gap-3">
+              <li v-for="light in selectedRoom.lights" :key="light.id" class="flex items-center gap-2.5" :class="{ 'opacity-50': !light.reachable }">
+                <AppIcon name="lightbulb" :size="14" :class="light.on ? 'text-warning-bright' : 'text-muted'" />
+                <span class="flex min-w-0 flex-1 flex-col">
+                  <strong class="font-bold">{{ light.name }}</strong>
+                  <span class="text-2xs text-muted">{{ !light.reachable ? 'Injoignable' : light.on ? `Allumée${light.brightness ? ` · ${light.brightness} %` : ''}` : 'Éteinte' }}</span>
                 </span>
                 <button class="switch" type="button" role="switch" :aria-checked="light.on" :disabled="!light.reachable || busy === light.id" :aria-label="`Allumer ${light.name}`" @click="toggleLight(light)" />
               </li>
@@ -124,111 +124,9 @@ async function disconnect() {
           </section>
         </div>
 
-        <button class="text-btn disconnect" type="button" @click="disconnect">Déconnecter Philips Hue</button>
+        <button class="text-btn self-center text-muted" type="button" @click="disconnect">Déconnecter Philips Hue</button>
       </template>
     </main>
     <HomeToast />
   </div>
 </template>
-
-<style scoped>
-.connect {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 24px;
-  text-align: center;
-  border-radius: var(--radius-xl);
-}
-
-.bulb {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  border-radius: var(--radius-xl);
-  background: var(--warning-soft);
-  color: var(--warning-bright);
-}
-
-.steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-  color: var(--text-muted);
-}
-
-.home-layout {
-  display: grid;
-  gap: 16px;
-}
-
-.rooms {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.detail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.range {
-  width: 100%;
-  accent-color: var(--primary);
-}
-
-.lights {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.lights li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.lights li.off {
-  opacity: 0.5;
-}
-
-.lights .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.lights strong {
-  font-weight: 700;
-}
-
-.lit {
-  color: var(--warning-bright);
-}
-
-.disconnect {
-  align-self: center;
-  color: var(--text-muted);
-}
-
-@media (min-width: 1024px) {
-  .home-layout {
-    grid-template-columns: minmax(0, 1fr) 360px;
-    align-items: start;
-  }
-}
-</style>

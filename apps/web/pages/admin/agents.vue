@@ -46,24 +46,24 @@ function connectionFor(keyId: string) {
       <p v-if="loadError" class="alert alert-error">{{ getErrorMessage(loadError) }}</p>
       <p v-if="error" class="alert alert-error" role="alert">{{ error }}</p>
 
-      <section class="card stack">
+      <section class="card flex flex-col gap-3 *:min-w-0">
         <h2>Nouvelle machine</h2>
-        <form class="row" @submit.prevent="create">
+        <form class="flex items-center gap-2" @submit.prevent="create">
           <label for="agent-name" class="sr-only">Nom de la machine</label>
-          <input id="agent-name" v-model="name" class="input grow" placeholder="ex. macbook-pro" required maxlength="100">
+          <input id="agent-name" v-model="name" class="input min-w-0 flex-1" placeholder="ex. macbook-pro" required maxlength="100">
           <button class="btn btn-primary" type="submit">Générer une clé</button>
         </form>
-        <div v-if="createdKey" class="alert alert-success new-key">
-          <p>Clé de <strong>{{ createdKey.name }}</strong>, à copier dans <code>AGENT_KEY</code> du <code>.env</code> de l'agent. Elle ne sera plus affichée :</p>
-          <code class="key">{{ createdKey.key }}</code>
+        <div v-if="createdKey" class="alert alert-success mt-4">
+          <p class="mb-2">Clé de <strong>{{ createdKey.name }}</strong>, à copier dans <code>AGENT_KEY</code> du <code>.env</code> de l'agent. Elle ne sera plus affichée :</p>
+          <code class="block break-all select-all">{{ createdKey.key }}</code>
         </div>
       </section>
 
-      <div v-if="data" class="stack">
-        <article v-for="key in data.keys" :key="key.id" class="card row key-row">
-          <div class="grow">
+      <div v-if="data" class="flex flex-col gap-3 *:min-w-0">
+        <article v-for="key in data.keys" :key="key.id" class="card flex items-center gap-2 px-4 py-[0.85rem]">
+          <div class="min-w-0 flex-1">
             <strong>{{ key.name }}</strong> <code>{{ key.keyPrefix }}…</code>
-            <div class="muted small">
+            <div class="text-xs text-muted">
               <template v-if="key.revokedAt">Révoquée {{ formatRelative(key.revokedAt) }}</template>
               <template v-else-if="connectionFor(key.id)">
                 Connecté · {{ connectionFor(key.id)!.chatModel }} · {{ connectionFor(key.id)!.activeTasks }}/{{ connectionFor(key.id)!.concurrency }} tâche(s)
@@ -83,28 +83,3 @@ function connectionFor(keyId: string) {
     </main>
   </div>
 </template>
-
-<style scoped>
-.grow {
-  flex: 1;
-  min-width: 0;
-}
-
-.new-key {
-  margin-top: 1rem;
-}
-
-.new-key p {
-  margin: 0 0 0.5rem;
-}
-
-.key {
-  display: block;
-  word-break: break-all;
-  user-select: all;
-}
-
-.key-row {
-  padding: 0.85rem 1rem;
-}
-</style>

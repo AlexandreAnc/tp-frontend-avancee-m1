@@ -1,11 +1,5 @@
 <template>
-  <main class="blank">
+  <main class="min-h-dvh">
     <slot />
   </main>
 </template>
-
-<style scoped>
-.blank {
-  min-height: 100dvh;
-}
-</style>

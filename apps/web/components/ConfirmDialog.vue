@@ -14,11 +14,17 @@ watch(request, (value) => {
 </script>
 
 <template>
-  <dialog ref="dialog" class="confirm-dialog" aria-labelledby="confirm-title" @close="answer(false)" @click.self="answer(false)">
-    <div v-if="request" class="stack">
-      <h2 id="confirm-title">{{ request.title }}</h2>
-      <p v-if="request.message" class="small muted">{{ request.message }}</p>
-      <div class="buttons">
+  <dialog
+    ref="dialog"
+    class="m-auto w-[min(420px,calc(100%-24px))] rounded-xl border bg-surface p-5 text-text backdrop:bg-night/45"
+    aria-labelledby="confirm-title"
+    @close="answer(false)"
+    @click.self="answer(false)"
+  >
+    <div v-if="request" class="flex flex-col gap-3 *:min-w-0">
+      <h2 id="confirm-title" class="text-[17px]">{{ request.title }}</h2>
+      <p v-if="request.message" class="text-xs text-muted">{{ request.message }}</p>
+      <div class="grid grid-cols-[1fr_1fr] gap-2">
         <button class="btn" type="button" @click="answer(false)">Annuler</button>
         <button ref="confirmButton" class="btn" :class="request.danger ? 'btn-danger' : 'btn-ink'" type="button" @click="answer(true)">
           {{ request.confirm ?? 'Confirmer' }}
@@ -27,28 +33,3 @@ watch(request, (value) => {
     </div>
   </dialog>
 </template>
-
-<style scoped>
-.confirm-dialog {
-  width: min(420px, calc(100% - 24px));
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.confirm-dialog::backdrop {
-  background: rgb(28 31 35 / 0.45);
-}
-
-.confirm-dialog h2 {
-  font-size: 17px;
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-</style>

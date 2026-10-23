@@ -55,35 +55,35 @@ async function ask() {
 
 <template>
   <main class="page">
-    <header class="hello">
+    <header class="flex items-center gap-3 pt-1">
       <UserAvatar v-if="me" :name="me.user.name" :size="48" />
-      <div class="grow">
-        <p class="small muted strong">{{ formatDayLong(new Date()) }}</p>
-        <h1 class="greeting">Bonjour {{ firstName }}</h1>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-extrabold text-muted">{{ formatDayLong(new Date()) }}</p>
+        <h1 class="text-[20px] leading-7 tracking-[-0.5px]">Bonjour {{ firstName }}</h1>
       </div>
-      <div class="mobile-only row">
+      <div class="flex items-center gap-2 lg:hidden">
         <StorageMeter v-if="me" :used-bytes="me.quota.usedBytes" :max-bytes="me.quota.maxBytes" compact />
-        <NuxtLink to="/actions" class="icon-btn bell" aria-label="Actions à valider">
+        <NuxtLink to="/actions" class="icon-btn relative" aria-label="Actions à valider">
           <AppIcon name="bell" />
-          <span v-if="actions?.actions.length" class="bell-count">{{ actions.actions.length }}</span>
+          <span v-if="actions?.actions.length" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] leading-[18px] font-extrabold text-white">{{ actions.actions.length }}</span>
         </NuxtLink>
       </div>
     </header>
 
-    <form class="command" @submit.prevent="ask">
+    <form class="-mt-2 flex flex-col gap-2" @submit.prevent="ask">
       <label class="input-group">
-        <AppIcon name="wand" :size="14" class="wand" />
+        <AppIcon name="wand" :size="14" class="text-primary" />
         <span class="sr-only">Demander à l'agent</span>
-        <input v-model="command" placeholder="Demander à l'agent…" :disabled="sending" enterkeyhint="send">
-        <button v-if="command.trim()" class="icon-btn icon-btn-primary send" type="submit" :disabled="sending" aria-label="Envoyer">
+        <input v-model="command" class="px-0.5 py-px" placeholder="Demander à l'agent…" :disabled="sending" enterkeyhint="send">
+        <button v-if="command.trim()" class="icon-btn icon-btn-primary -mr-2 size-8" type="submit" :disabled="sending" aria-label="Envoyer">
           <AppIcon name="arrow-up" :size="14" />
         </button>
       </label>
       <p v-if="error" class="alert alert-error">{{ error }}</p>
     </form>
 
-    <div class="grid-2">
-      <div class="stack">
+    <div class="grid gap-4 *:min-w-0 lg:grid-cols-2 lg:items-start">
+      <div class="flex flex-col gap-3 *:min-w-0">
         <PanelToday :today="agenda?.items ?? []" :deadlines="deadlines" :calendar-connected="agenda?.calendarConnected ?? false" />
         <PanelActions :actions="(actions?.actions ?? []).slice(0, 2)" :total="actions?.actions.length ?? 0" @decided="refreshActions" />
         <PanelHome />
@@ -95,7 +95,7 @@ async function ask() {
           </div>
         </PanelCard>
       </div>
-      <div class="stack">
+      <div class="flex flex-col gap-3 *:min-w-0">
         <PanelDocuments :files="recentFiles" />
         <PanelAgentCard :online="online ?? status?.online ?? null" :agent="agent ?? status?.agent ?? null" :queue="status?.queue ?? null" />
         <PanelActivity :entries="journal?.entries ?? []" />
@@ -104,61 +104,3 @@ async function ask() {
   </main>
   <HomeToast />
 </template>
-
-<style scoped>
-.hello {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: 4px;
-}
-
-.greeting {
-  font-size: 20px;
-  line-height: 28px;
-  letter-spacing: -0.5px;
-}
-
-.bell {
-  position: relative;
-}
-
-.bell-count {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: var(--radius-pill);
-  background: var(--danger);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 18px;
-  text-align: center;
-}
-
-.command {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: -8px;
-}
-
-.wand {
-  color: var(--primary);
-}
-
-.send {
-  width: 32px;
-  height: 32px;
-  margin-right: -8px;
-}
-
-@media (min-width: 1024px) {
-  .mobile-only {
-    display: none;
-  }
-}
-</style>

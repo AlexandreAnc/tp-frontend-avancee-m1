@@ -65,10 +65,10 @@ function exportJournal() {
         <button class="icon-btn" type="button" aria-label="Exporter le journal" @click="exportJournal"><AppIcon name="arrow-up-from-bracket" /></button>
       </template>
       <template #below>
-        <label class="input-group search">
+        <label class="input-group min-h-11">
           <AppIcon name="search" :size="14" />
           <span class="sr-only">Rechercher dans le journal</span>
-          <input v-model="search" type="search" placeholder="Rechercher dans le journal">
+          <input v-model="search" class="px-0.5" type="search" placeholder="Rechercher dans le journal">
         </label>
         <div class="chips">
           <button class="chip" :class="{ active: filter === 'all' }" type="button" @click="filter = 'all'">Tout</button>
@@ -80,15 +80,15 @@ function exportJournal() {
     </PageHeader>
 
     <main class="page page-narrow">
-      <div class="stats">
-        <div class="card stat"><strong>{{ stats.total }}</strong><span class="small muted strong">Événements</span></div>
-        <div class="card stat"><strong class="ok">{{ stats.validated }}</strong><span class="small muted strong">Validations</span></div>
-        <div class="card stat"><strong class="ko">{{ stats.failed }}</strong><span class="small muted strong">Échecs</span></div>
+      <div class="grid grid-cols-[repeat(3,1fr)] gap-2">
+        <div class="card flex flex-col gap-0.5 p-3.5"><strong class="text-[22px] leading-7 font-extrabold">{{ stats.total }}</strong><span class="text-xs font-extrabold text-muted">Événements</span></div>
+        <div class="card flex flex-col gap-0.5 p-3.5"><strong class="text-[22px] leading-7 font-extrabold text-primary-strong">{{ stats.validated }}</strong><span class="text-xs font-extrabold text-muted">Validations</span></div>
+        <div class="card flex flex-col gap-0.5 p-3.5"><strong class="text-[22px] leading-7 font-extrabold text-danger">{{ stats.failed }}</strong><span class="text-xs font-extrabold text-muted">Échecs</span></div>
       </div>
 
-      <section v-for="group in groups" :key="group.label" class="section">
+      <section v-for="group in groups" :key="group.label" class="flex flex-col gap-3">
         <h2 class="section-label">{{ group.label }}</h2>
-        <ul class="timeline">
+        <ul class="relative flex flex-col gap-3 before:absolute before:top-5 before:bottom-5 before:left-[19.5px] before:w-px before:bg-border">
           <JournalItem v-for="entry in group.items" :key="entry.id" :entry="entry" @changed="load()" />
         </ul>
       </section>
@@ -103,56 +103,3 @@ function exportJournal() {
     </main>
   </div>
 </template>
-
-<style scoped>
-.search {
-  min-height: 44px;
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px;
-}
-
-.stat strong {
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 800;
-}
-
-.ok {
-  color: var(--primary-strong);
-}
-
-.ko {
-  color: var(--danger);
-}
-
-.timeline {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.timeline::before {
-  content: '';
-  position: absolute;
-  top: 20px;
-  bottom: 20px;
-  left: 19.5px;
-  width: 1px;
-  background: var(--border);
-}
-</style>

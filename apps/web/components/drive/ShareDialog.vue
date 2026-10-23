@@ -83,24 +83,29 @@ defineExpose({ open });
 </script>
 
 <template>
-  <dialog ref="dialog" class="share" aria-labelledby="share-title" @click.self="dialog?.close()">
-    <div v-if="file" class="stack">
-      <header class="row">
+  <dialog
+    ref="dialog"
+    class="m-auto w-[min(460px,calc(100%-24px))] rounded-xl border bg-surface p-5 text-text backdrop:bg-night/45"
+    aria-labelledby="share-title"
+    @click.self="dialog?.close()"
+  >
+    <div v-if="file" class="flex flex-col gap-3 *:min-w-0">
+      <header class="flex items-center gap-2">
         <FileTypeIcon :mime-type="file.mimeType" :size="32" />
-        <div class="grow">
-          <h2 id="share-title">Partager par lien</h2>
-          <p class="tiny muted ellipsis">{{ file.name }}</p>
+        <div class="min-w-0 flex-1">
+          <h2 id="share-title" class="text-[16px]">Partager par lien</h2>
+          <p class="truncate text-2xs text-muted">{{ file.name }}</p>
         </div>
         <button class="icon-btn" type="button" aria-label="Fermer" @click="dialog?.close()"><AppIcon name="xmark" :size="12" /></button>
       </header>
 
-      <p class="small muted">
+      <p class="text-xs text-muted">
         Toute personne ayant le lien peut télécharger ce fichier, sans compte, jusqu’à son expiration. Le reste de votre drive n’est jamais visible.
       </p>
 
       <template v-if="createdUrl">
-        <code class="url">{{ createdUrl }}</code>
-        <div class="buttons">
+        <code class="block p-3 break-all select-all">{{ createdUrl }}</code>
+        <div class="grid grid-cols-[1fr_1fr] gap-2">
           <button class="btn btn-ink" type="button" @click="copy"><AppIcon name="file-export" :size="12" />{{ copied ? 'Copié ✓' : 'Copier le lien' }}</button>
           <button v-if="canShareNative" class="btn" type="button" @click="shareNative"><AppIcon name="paper-plane" :size="12" />Envoyer…</button>
           <button v-else class="btn" type="button" @click="createdUrl = null">Nouveau lien</button>
@@ -127,13 +132,13 @@ defineExpose({ open });
 
       <p v-if="error" class="alert alert-error">{{ error }}</p>
 
-      <section v-if="links.length" class="stack">
+      <section v-if="links.length" class="flex flex-col gap-3 *:min-w-0">
         <h3 class="section-label">Liens actifs</h3>
         <div class="card card-flush">
-          <div v-for="link in links" :key="link.id" class="link-row">
-            <span class="grow small">
+          <div v-for="link in links" :key="link.id" class="flex items-center gap-2.5 px-3.5 py-3 not-first:border-t">
+            <span class="flex min-w-0 flex-1 flex-col text-xs">
               <strong>Expire dans {{ remaining(link.expiresAt) }}</strong>
-              <span class="tiny muted">{{ link.downloadCount }} téléchargement{{ link.downloadCount > 1 ? 's' : '' }}</span>
+              <span class="text-2xs text-muted">{{ link.downloadCount }} téléchargement{{ link.downloadCount > 1 ? 's' : '' }}</span>
             </span>
             <button class="btn btn-sm" type="button" @click="revoke(link)">Révoquer</button>
           </div>
@@ -142,55 +147,3 @@ defineExpose({ open });
     </div>
   </dialog>
 </template>
-
-<style scoped>
-.share {
-  width: min(460px, calc(100% - 24px));
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.share::backdrop {
-  background: rgb(28 31 35 / 0.45);
-}
-
-.share h2 {
-  font-size: 16px;
-}
-
-.share .grow {
-  min-width: 0;
-}
-
-.url {
-  display: block;
-  padding: 12px;
-  word-break: break-all;
-  user-select: all;
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.link-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-}
-
-.link-row + .link-row {
-  border-top: 1px solid var(--border);
-}
-
-.link-row .grow {
-  display: flex;
-  flex-direction: column;
-}
-</style>

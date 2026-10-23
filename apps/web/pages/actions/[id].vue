@@ -56,37 +56,37 @@ async function decide(decision: 'approve' | 'reject') {
       <p v-if="loadError" class="alert alert-error">{{ getErrorMessage(loadError, 'Action introuvable.') }}</p>
 
       <!-- Retour d'exécution -->
-      <section v-else-if="action && action.status === 'executed'" class="card result">
-        <span class="big-check"><AppIcon name="check" :size="22" /></span>
-        <h1>{{ visual.done }}</h1>
-        <p class="muted">{{ action.summary }}</p>
-        <ul class="done-list">
-          <li><AppIcon name="circle-check" :size="14" />Validé par vous</li>
-          <li><AppIcon name="circle-check" :size="14" />Exécuté par le serveur avec votre connexion</li>
-          <li v-if="link"><AppIcon name="circle-check" :size="14" /><a :href="link" target="_blank" rel="noopener">Voir dans Google Agenda</a></li>
+      <section v-else-if="action && action.status === 'executed'" class="card flex flex-col items-center gap-3.5 rounded-xl p-6 text-center">
+        <span class="inline-flex size-16 items-center justify-center rounded-full bg-primary-soft text-primary"><AppIcon name="check" :size="22" /></span>
+        <h1 class="text-[22px] leading-7">{{ visual.done }}</h1>
+        <p class="text-muted">{{ action.summary }}</p>
+        <ul class="flex w-full flex-col gap-2 rounded-md bg-surface-muted p-4 text-left">
+          <li class="flex items-center gap-2 text-[12px] font-bold"><AppIcon name="circle-check" :size="14" class="text-primary" />Validé par vous</li>
+          <li class="flex items-center gap-2 text-[12px] font-bold"><AppIcon name="circle-check" :size="14" class="text-primary" />Exécuté par le serveur avec votre connexion</li>
+          <li v-if="link" class="flex items-center gap-2 text-[12px] font-bold"><AppIcon name="circle-check" :size="14" class="text-primary" /><a :href="link" target="_blank" rel="noopener">Voir dans Google Agenda</a></li>
         </ul>
-        <div class="buttons">
+        <div class="grid w-full grid-cols-[1fr_1fr] gap-2">
           <NuxtLink to="/journal" class="btn">Voir le journal</NuxtLink>
           <NuxtLink to="/" class="btn btn-ink">Terminé</NuxtLink>
         </div>
       </section>
 
-      <section v-else-if="action" class="card confirm">
-        <span class="icon-tile" :class="visual.tone"><AppIcon :name="visual.icon" :size="18" /></span>
-        <h1>{{ action.summary }}</h1>
-        <p class="muted">Voici exactement ce que l'agent va faire :</p>
+      <section v-else-if="action" class="card flex flex-col gap-3.5 rounded-xl p-6">
+        <span class="icon-tile size-12 rounded-lg" :class="visual.tone"><AppIcon :name="visual.icon" :size="18" /></span>
+        <h1 class="text-[22px] leading-7">{{ action.summary }}</h1>
+        <p class="text-muted">Voici exactement ce que l'agent va faire :</p>
 
-        <dl v-if="rows.length" class="details">
-          <div v-for="row in rows" :key="row.label">
-            <dt>{{ row.label }}</dt>
-            <dd>{{ row.value }}</dd>
+        <dl v-if="rows.length" class="flex flex-col gap-2.5 rounded-lg bg-surface-muted p-4">
+          <div v-for="row in rows" :key="row.label" class="grid grid-cols-[64px_1fr] gap-3">
+            <dt class="text-[12px] text-muted">{{ row.label }}</dt>
+            <dd class="font-bold">{{ row.value }}</dd>
           </div>
         </dl>
 
-        <ul class="facts small">
-          <li v-if="action.conversationId"><AppIcon name="comments" :size="12" /><span><strong>Pourquoi ?</strong> Vous l'avez demandé <NuxtLink :to="`/chat/${action.conversationId}`">dans une discussion</NuxtLink>.</span></li>
-          <li><AppIcon name="clock" :size="12" /><span>{{ action.status === 'pending' ? `Expire ${formatRelative(action.expiresAt)} : sans validation, rien ne sera fait.` : `Statut : ${ACTION_STATUS_LABELS[action.status].label}.` }}</span></li>
-          <li v-if="action.risk === 'sensitive'" class="warn"><AppIcon name="triangle-exclamation" :size="12" /><span>Action sensible : elle ne pourra pas être annulée.</span></li>
+        <ul class="flex flex-col gap-2 text-xs">
+          <li v-if="action.conversationId" class="flex gap-2 text-muted"><AppIcon name="comments" :size="12" class="mt-[3px]" /><span><strong class="text-text">Pourquoi ?</strong> Vous l'avez demandé <NuxtLink :to="`/chat/${action.conversationId}`">dans une discussion</NuxtLink>.</span></li>
+          <li class="flex gap-2 text-muted"><AppIcon name="clock" :size="12" class="mt-[3px]" /><span>{{ action.status === 'pending' ? `Expire ${formatRelative(action.expiresAt)} : sans validation, rien ne sera fait.` : `Statut : ${ACTION_STATUS_LABELS[action.status].label}.` }}</span></li>
+          <li v-if="action.risk === 'sensitive'" class="flex gap-2 text-warning"><AppIcon name="triangle-exclamation" :size="12" class="mt-[3px]" /><span>Action sensible : elle ne pourra pas être annulée.</span></li>
         </ul>
 
         <p v-if="action.error" class="alert alert-error">{{ action.error }}</p>
@@ -97,139 +97,9 @@ async function decide(decision: 'approve' | 'reject') {
             <AppIcon v-if="action.risk === 'sensitive'" name="face-smile" :size="16" />
             {{ action.risk === 'sensitive' ? 'Valider avec Face ID' : 'Valider' }}
           </button>
-          <button class="text-btn reject" type="button" :disabled="busy" @click="decide('reject')">Refuser cette action</button>
+          <button class="text-btn self-center text-[14px] text-danger" type="button" :disabled="busy" @click="decide('reject')">Refuser cette action</button>
         </template>
       </section>
     </main>
   </div>
 </template>
-
-<style scoped>
-.confirm,
-.result {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 24px;
-  border-radius: var(--radius-xl);
-}
-
-.confirm h1,
-.result h1 {
-  font-size: 22px;
-  line-height: 28px;
-}
-
-.confirm .icon-tile {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
-}
-
-.details {
-  margin: 0;
-  padding: 16px;
-  border-radius: var(--radius-lg);
-  background: var(--surface-muted);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.details div {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 12px;
-}
-
-.details dt {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.details dd {
-  margin: 0;
-  font-weight: 700;
-}
-
-.facts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.facts li {
-  display: flex;
-  gap: 8px;
-  color: var(--text-muted);
-}
-
-.facts li .app-icon {
-  margin-top: 3px;
-}
-
-.facts strong {
-  color: var(--text);
-}
-
-.facts .warn {
-  color: var(--warning);
-}
-
-.reject {
-  align-self: center;
-  color: var(--danger);
-  font-size: 14px;
-}
-
-.result {
-  align-items: center;
-  text-align: center;
-}
-
-.big-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--primary-soft);
-  color: var(--primary);
-}
-
-.done-list {
-  list-style: none;
-  margin: 0;
-  padding: 16px;
-  width: 100%;
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: left;
-}
-
-.done-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.done-list .app-icon {
-  color: var(--primary);
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  width: 100%;
-}
-</style>

@@ -6,12 +6,12 @@ defineProps<{ files: FileItem[] }>();
 
 <template>
   <PanelCard title="Documents" icon="folder" tone="info" :link="{ to: '/drive', label: 'Drive' }">
-    <ul v-if="files.length" class="docs">
-      <li v-for="file in files" :key="file.id" class="doc" @click="navigateTo({ path: '/drive', query: { preview: file.id } })">
+    <ul v-if="files.length" class="flex flex-col gap-3">
+      <li v-for="file in files" :key="file.id" class="flex cursor-pointer items-center gap-3" @click="navigateTo({ path: '/drive', query: { preview: file.id } })">
         <FileTypeIcon :mime-type="file.mimeType" :size="36" />
-        <span class="grow">
-          <strong class="ellipsis">{{ file.name }}</strong>
-          <span class="tiny muted ellipsis">{{ fileSubtitle(file) }}</span>
+        <span class="flex min-w-0 flex-1 flex-col">
+          <strong class="truncate">{{ file.name }}</strong>
+          <span class="truncate text-2xs text-muted">{{ fileSubtitle(file) }}</span>
         </span>
         <FileStatusBadge :status="file.status" />
       </li>
@@ -23,26 +23,3 @@ defineProps<{ files: FileItem[] }>();
     </div>
   </PanelCard>
 </template>
-
-<style scoped>
-.docs {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.docs li {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.docs .grow {
-  display: flex;
-  flex-direction: column;
-}
-</style>

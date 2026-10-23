@@ -13,7 +13,7 @@ const rooms = computed(() => (home.value?.rooms ?? []).filter((room) => room.kin
           <AppIcon name="book-open" :size="12" />{{ item.name }}
         </button>
       </div>
-      <div class="rooms">
+      <div class="grid grid-cols-3 gap-2">
         <HomeRoomTile v-for="room in rooms" :key="room.id" :room="room" :busy="busy === room.id" @toggle="toggleRoom(room)" @select="navigateTo('/maison')" />
       </div>
     </template>
@@ -24,11 +24,3 @@ const rooms = computed(() => (home.value?.rooms ?? []).filter((room) => room.kin
     </div>
   </PanelCard>
 </template>
-
-<style scoped>
-.rooms {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-</style>

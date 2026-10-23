@@ -58,17 +58,24 @@ function onPinInput(event: Event) {
 </script>
 
 <template>
-  <div v-if="visible" class="lock" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+  <div
+    v-if="visible"
+    class="fixed inset-0 z-100 flex flex-col items-center justify-center gap-4 bg-bg/92 p-6 text-center backdrop-blur-lg"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="lock-title"
+  >
     <BrandLogo :size="64" :online="false" />
-    <h1 id="lock-title">DashIA est verrouillé</h1>
-    <p class="muted small">Vos documents et discussions restent masqués tant que vous n'avez pas déverrouillé l'app.</p>
+    <h1 id="lock-title" class="text-[22px] leading-7">DashIA est verrouillé</h1>
+    <p class="text-xs text-muted">Vos documents et discussions restent masqués tant que vous n'avez pas déverrouillé l'app.</p>
 
-    <form v-if="showPin" class="pin" @submit.prevent="unlockWithPin">
+    <form v-if="showPin" class="relative flex flex-col items-center gap-2.5" @submit.prevent="unlockWithPin">
       <label class="field-label" for="unlock-pin">Code de secours</label>
+      <!-- Le champ reste réel (clavier numérique, gestionnaires de mots de passe) mais invisible : on affiche des points. -->
       <input
         id="unlock-pin"
         ref="pinInput"
-        class="input pin-input"
+        class="input absolute inset-x-0 top-6 bottom-auto h-10 opacity-0"
         :value="pin"
         inputmode="numeric"
         autocomplete="one-time-code"
@@ -77,10 +84,10 @@ function onPinInput(event: Event) {
         aria-describedby="pin-help"
         @input="onPinInput"
       >
-      <span class="pin-dots" aria-hidden="true"><i v-for="index in 6" :key="index" :class="{ on: index <= pin.length }" /></span>
-      <span id="pin-help" class="tiny muted">6 chiffres</span>
+      <span class="flex gap-3.5 py-2.5" aria-hidden="true"><i v-for="index in 6" :key="index" class="size-3.5 rounded-full border-2 border-ink" :class="{ 'bg-ink': index <= pin.length }" /></span>
+      <span id="pin-help" class="text-2xs text-muted">6 chiffres</span>
     </form>
-    <button v-else-if="supported" class="btn btn-primary btn-xl btn-block btn-shadow" type="button" :disabled="busy" @click="unlock">
+    <button v-else-if="supported" class="btn btn-primary btn-xl btn-block btn-shadow max-w-[360px]" type="button" :disabled="busy" @click="unlock">
       <AppIcon name="face-smile" :size="18" />Déverrouiller avec Face ID
     </button>
 
@@ -91,62 +98,3 @@ function onPinInput(event: Event) {
     <button class="btn btn-ghost" type="button" @click="signOut">Utiliser le mot de passe</button>
   </div>
 </template>
-
-<style scoped>
-.lock {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 24px;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(16px);
-  text-align: center;
-}
-
-.lock h1 {
-  font-size: 22px;
-  line-height: 28px;
-}
-
-.lock .btn-block {
-  max-width: 360px;
-}
-
-.pin {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Le champ reste réel (clavier numérique, gestionnaires de mots de passe) mais invisible : on affiche des points. */
-.pin-input {
-  position: absolute;
-  inset: 24px 0 auto;
-  height: 40px;
-  opacity: 0;
-}
-
-.pin-dots {
-  display: flex;
-  gap: 14px;
-  padding: 10px 0;
-}
-
-.pin-dots i {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-}
-
-.pin-dots i.on {
-  background: var(--ink);
-}
-</style>

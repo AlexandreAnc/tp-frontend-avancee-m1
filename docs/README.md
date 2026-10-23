@@ -45,6 +45,7 @@ Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une ma
 | Couche | Technologie |
 |---|---|
 | Front + API | Nuxt (Vue, Nitro), TypeScript |
+| CSS | Tailwind CSS v4 |
 | PWA | `@vite-pwa/nuxt` |
 | Base de données | PostgreSQL + pgvector |
 | ORM | Drizzle |

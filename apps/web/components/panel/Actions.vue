@@ -7,7 +7,7 @@ const emit = defineEmits<{ decided: [] }>();
 
 <template>
   <PanelCard title="À valider" icon="hand" tone="danger" :count="total" :link="{ to: '/actions', label: 'Tout voir' }" :accent="total > 0">
-    <div v-if="actions.length" class="stack">
+    <div v-if="actions.length" class="flex flex-col gap-3 *:min-w-0">
       <ActionCard v-for="action in actions" :key="action.id" :action="action" compact @decided="emit('decided')" />
     </div>
     <div v-else class="empty-state">

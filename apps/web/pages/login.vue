@@ -57,23 +57,23 @@ async function submit() {
 </script>
 
 <template>
-  <section class="hero">
+  <section class="flex flex-col items-center pt-16 text-center">
     <BrandLogo />
-    <h1 class="title">DashIA</h1>
-    <p class="muted tagline">Votre assistant I.A local — planning, documents et maison, au même endroit.</p>
+    <h1 class="mt-5 text-[28px] leading-[42px] tracking-[-0.7px]">DashIA</h1>
+    <p class="mt-1 max-w-[260px] text-muted">Votre assistant I.A local — planning, documents et maison, au même endroit.</p>
   </section>
 
-  <div class="segmented" role="tablist" aria-label="Connexion ou inscription">
+  <div class="segmented mt-8" role="tablist" aria-label="Connexion ou inscription">
     <button type="button" role="tab" :aria-selected="mode === 'login'" :class="{ active: mode === 'login' }" @click="mode = 'login'">Connexion</button>
     <button type="button" role="tab" :aria-selected="mode === 'register'" :class="{ active: mode === 'register' }" @click="mode = 'register'">Inscription</button>
   </div>
 
-  <form class="form" @submit.prevent="submit">
+  <form class="mt-6 mb-8 flex flex-col gap-4" @submit.prevent="submit">
     <template v-if="mode === 'login' && passkeySupported">
       <button class="btn btn-primary btn-xl btn-block btn-shadow" type="button" :disabled="loading" @click="signInWithPasskey">
         <AppIcon name="face-smile" :size="18" />Se connecter avec Face ID
       </button>
-      <div class="divider"><span>ou avec votre e-mail</span></div>
+      <div class="flex items-center gap-3 text-xs leading-5 text-muted before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border"><span>ou avec votre e-mail</span></div>
     </template>
     <p v-if="error" class="alert alert-error" role="alert"><AppIcon name="circle-exclamation" :size="14" />{{ error }}</p>
 
@@ -81,7 +81,7 @@ async function submit() {
       <span class="field-label">Nom</span>
       <span class="input-group">
         <AppIcon name="face-smile" :size="16" />
-        <input v-model="name" autocomplete="name" required placeholder="Julien Morel">
+        <input v-model="name" class="px-0.5 py-px" autocomplete="name" required placeholder="Julien Morel">
       </span>
     </label>
 
@@ -89,7 +89,7 @@ async function submit() {
       <span class="field-label">E-mail</span>
       <span class="input-group">
         <AppIcon name="envelope" :size="16" />
-        <input v-model="email" type="email" autocomplete="email" required placeholder="vous@exemple.fr">
+        <input v-model="email" class="px-0.5 py-px" type="email" autocomplete="email" required placeholder="vous@exemple.fr">
       </span>
     </label>
 
@@ -99,16 +99,23 @@ async function submit() {
         <AppIcon name="lock" :size="16" />
         <input
           v-model="password"
+          class="px-0.5 py-px"
           :type="showPassword ? 'text' : 'password'"
           :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
           :minlength="mode === 'register' ? MIN_PASSWORD_LENGTH : undefined"
           required
         >
-        <button type="button" class="reveal" :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'" :aria-pressed="showPassword" @click="showPassword = !showPassword">
+        <button
+          type="button"
+          class="inline-flex cursor-pointer p-1 text-muted"
+          :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+          :aria-pressed="showPassword"
+          @click="showPassword = !showPassword"
+        >
           <AppIcon name="eye" :size="16" />
         </button>
       </span>
-      <span v-if="mode === 'register'" class="tiny muted">{{ MIN_PASSWORD_LENGTH }} caractères minimum</span>
+      <span v-if="mode === 'register'" class="text-2xs text-muted">{{ MIN_PASSWORD_LENGTH }} caractères minimum</span>
     </label>
 
     <button class="btn btn-ink btn-lg btn-block" type="submit" :disabled="loading">
@@ -117,87 +124,11 @@ async function submit() {
     </button>
   </form>
 
-  <footer class="privacy">
-    <span class="icon-tile tone-primary"><AppIcon name="shield" /></span>
-    <p class="small">
+  <footer class="mt-auto flex items-start gap-3 rounded-md border bg-surface/70 p-[15px] leading-[19.5px]">
+    <span class="icon-tile tone-primary size-8 rounded-sm"><AppIcon name="shield" /></span>
+    <p class="text-xs">
       <strong>Vos documents sont analysés chez vous.</strong>
-      <span class="muted"> L'agent I.A tourne sur votre PC : aucun service d'I.A tiers ne reçoit vos données.</span>
+      <span class="text-muted"> L'agent I.A tourne sur votre PC : aucun service d'I.A tiers ne reçoit vos données.</span>
     </p>
   </footer>
 </template>
-
-<style scoped>
-.hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 64px;
-  text-align: center;
-}
-
-.title {
-  margin-top: 20px;
-  font-size: 28px;
-  line-height: 42px;
-  letter-spacing: -0.7px;
-}
-
-.tagline {
-  max-width: 260px;
-  margin-top: 4px;
-}
-
-.segmented {
-  margin-top: 32px;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 24px 0 32px;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.reveal {
-  display: inline-flex;
-  border: none;
-  background: none;
-  padding: 4px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.privacy {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-top: auto;
-  padding: 15px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  line-height: 19.5px;
-}
-
-.privacy .icon-tile {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-}
-</style>

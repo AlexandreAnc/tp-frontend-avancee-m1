@@ -16,104 +16,26 @@ const facts = computed(() => {
 </script>
 
 <template>
-  <section class="details">
-    <header class="head">
+  <section class="overflow-hidden rounded-lg border bg-surface">
+    <header class="flex items-center gap-3 border-b p-4">
       <FileTypeIcon :mime-type="file.mimeType" :size="40" />
-      <div class="grow">
+      <div class="flex min-w-0 flex-1 flex-col">
         <span class="section-label">Infos clés</span>
-        <strong class="name">{{ file.name }}</strong>
+        <strong class="font-extrabold [word-break:break-word]">{{ file.name }}</strong>
       </div>
     </header>
-    <p v-if="file.analysis" class="summary small">{{ file.analysis.summary }}</p>
-    <dl v-if="facts.length" class="facts">
-      <div v-for="fact in facts" :key="`${fact.term}-${fact.value}`" class="fact">
-        <dt class="small muted strong">{{ fact.term }}</dt>
-        <dd :class="{ deadline: fact.deadline, list: 'list' in fact }">{{ fact.value }}</dd>
+    <p v-if="file.analysis" class="border-b px-4 py-3 text-xs text-muted">{{ file.analysis.summary }}</p>
+    <dl v-if="facts.length" class="grid grid-cols-[1fr_1fr] gap-px bg-border">
+      <div v-for="fact in facts" :key="`${fact.term}-${fact.value}`" class="bg-surface px-3.5 pt-[13px] pb-4 last:odd:col-span-full">
+        <dt class="text-xs font-extrabold text-muted">{{ fact.term }}</dt>
+        <dd class="mt-0.5 font-extrabold [word-break:break-word]" :class="['list' in fact ? 'text-sm' : 'text-[16px] leading-6', { 'text-danger': fact.deadline }]">{{ fact.value }}</dd>
       </div>
     </dl>
-    <p v-else-if="file.status === 'ready'" class="small muted pad">Aucune information clé repérée dans ce document.</p>
-    <footer class="actions">
+    <p v-else-if="file.status === 'ready'" class="p-4 text-xs text-muted">Aucune information clé repérée dans ce document.</p>
+    <footer class="flex gap-2 border-t px-4 py-3">
       <button class="btn btn-sm btn-ink" type="button" @click="emit('preview', file.id)"><AppIcon name="eye" :size="12" />Aperçu</button>
       <button class="btn btn-sm" type="button" @click="emit('reindex', file.id)"><AppIcon name="rotate-right" :size="12" />Réanalyser</button>
       <button class="btn btn-sm" type="button" @click="emit('delete', file.id)"><AppIcon name="trash" :size="12" />Corbeille</button>
     </footer>
   </section>
 </template>
-
-<style scoped>
-.details {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.head .grow {
-  display: flex;
-  flex-direction: column;
-}
-
-.name {
-  font-weight: 800;
-  word-break: break-word;
-}
-
-.summary {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-muted);
-}
-
-.facts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  margin: 0;
-  background: var(--border);
-}
-
-.fact {
-  padding: 13px 14px 16px;
-  background: var(--surface);
-}
-
-.fact dd {
-  margin: 2px 0 0;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 800;
-  word-break: break-word;
-}
-
-.fact:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
-
-.fact dd.list {
-  font-size: 14px;
-  line-height: 20px;
-}
-
-.fact dd.deadline {
-  color: var(--danger);
-}
-
-.pad {
-  padding: 16px;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-}
-</style>

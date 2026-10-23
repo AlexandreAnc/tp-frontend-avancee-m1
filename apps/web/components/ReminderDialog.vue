@@ -48,9 +48,9 @@ defineExpose({ open });
 </script>
 
 <template>
-  <dialog ref="dialog" class="sheet" aria-labelledby="reminder-title">
-    <form class="stack" @submit.prevent="submit">
-      <div class="row between">
+  <dialog ref="dialog" class="m-auto w-[min(440px,calc(100%-24px))] rounded-xl border bg-surface p-5 text-text backdrop:bg-night/45" aria-labelledby="reminder-title">
+    <form class="flex flex-col gap-3 *:min-w-0" @submit.prevent="submit">
+      <div class="flex items-center justify-between gap-2">
         <h2 id="reminder-title">Nouveau rappel</h2>
         <button class="icon-btn" type="button" aria-label="Fermer" @click="dialog?.close()"><AppIcon name="xmark" /></button>
       </div>
@@ -63,34 +63,13 @@ defineExpose({ open });
         <button class="chip" type="button" @click="quick('evening')">Ce soir</button>
         <button class="chip" type="button" @click="quick('tomorrow')">Demain 9h</button>
       </div>
-      <div class="when">
+      <div class="grid grid-cols-[1fr_1fr] gap-2">
         <label class="field"><span class="field-label">Jour</span><input v-model="date" class="input" type="date" required></label>
         <label class="field"><span class="field-label">Heure</span><input v-model="time" class="input" type="time" required></label>
       </div>
-      <p class="small muted">Vous recevrez une notification à l'heure dite.</p>
+      <p class="text-xs text-muted">Vous recevrez une notification à l'heure dite.</p>
       <p v-if="error" class="alert alert-error">{{ error }}</p>
       <button class="btn btn-primary btn-lg btn-block" type="submit" :disabled="busy">Programmer le rappel</button>
     </form>
   </dialog>
 </template>
-
-<style scoped>
-.sheet {
-  width: min(440px, calc(100% - 24px));
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.sheet::backdrop {
-  background: rgb(28 31 35 / 0.45);
-}
-
-.when {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-</style>

@@ -75,34 +75,34 @@ defineExpose({ pick: () => filesInput.value?.click() });
 
 <template>
   <section
-    class="dropzone"
-    :class="{ dragging, full: remaining <= 0 }"
+    class="flex flex-col items-center gap-1 rounded-lg border-2 border-dashed p-[22px] text-center [transition:background_0.15s,border-color_0.15s]"
+    :class="remaining <= 0 ? 'border-rose/40 bg-danger-soft/60' : dragging ? 'border-primary bg-primary-soft' : 'border-emerald-deep/40 bg-primary-soft/60'"
     @dragover.prevent="dragging = true"
     @dragleave="dragging = false"
     @drop.prevent="onDrop"
   >
-    <span class="cloud"><AppIcon name="cloud-upload" :size="18" /></span>
+    <span class="mb-2 inline-flex size-12 items-center justify-center rounded-lg bg-surface text-primary-strong shadow-sm"><AppIcon name="cloud-upload" :size="18" /></span>
     <template v-if="uploading">
-      <strong class="title"><span class="spinner" /> Envoi de {{ uploading.name }}…</strong>
-      <span class="small muted">{{ uploading.index }} / {{ uploading.total }}</span>
+      <strong class="inline-flex items-center gap-2 text-sm font-extrabold"><span class="spinner" /> Envoi de {{ uploading.name }}…</strong>
+      <span class="text-xs text-muted">{{ uploading.index }} / {{ uploading.total }}</span>
     </template>
     <template v-else-if="remaining <= 0">
-      <strong class="title">Stockage plein</strong>
-      <span class="small muted">{{ formatBytes(maxBytes) }} utilisés : supprimez des fichiers pour en ajouter.</span>
+      <strong class="inline-flex items-center gap-2 text-sm font-extrabold">Stockage plein</strong>
+      <span class="text-xs text-muted">{{ formatBytes(maxBytes) }} utilisés : supprimez des fichiers pour en ajouter.</span>
     </template>
     <template v-else>
-      <strong class="title">Déposez un document{{ folderName ? ` dans « ${folderName} »` : '' }}</strong>
-      <span class="small muted">PDF, Word, Excel, images · {{ maxSizeLabel }} max · l'agent l'analyse sur votre PC</span>
+      <strong class="inline-flex items-center gap-2 text-sm font-extrabold">Déposez un document{{ folderName ? ` dans « ${folderName} »` : '' }}</strong>
+      <span class="text-xs text-muted">PDF, Word, Excel, images · {{ maxSizeLabel }} max · l'agent l'analyse sur votre PC</span>
     </template>
 
-    <div class="sources">
-      <button type="button" class="source" :disabled="remaining <= 0 || !!uploading" @click="cameraInput?.click()">
+    <div class="mt-4 grid w-full grid-cols-[repeat(3,1fr)] gap-2">
+      <button type="button" class="flex h-16 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border bg-surface px-1.5 py-px text-[12px] font-bold text-text disabled:cursor-not-allowed disabled:opacity-50" :disabled="remaining <= 0 || !!uploading" @click="cameraInput?.click()">
         <AppIcon name="camera" :size="16" /><span>Scanner</span>
       </button>
-      <button type="button" class="source" :disabled="remaining <= 0 || !!uploading" @click="filesInput?.click()">
+      <button type="button" class="flex h-16 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border bg-surface px-1.5 py-px text-[12px] font-bold text-text disabled:cursor-not-allowed disabled:opacity-50" :disabled="remaining <= 0 || !!uploading" @click="filesInput?.click()">
         <AppIcon name="folder-open" :size="16" /><span>Fichiers</span>
       </button>
-      <button type="button" class="source" :disabled="remaining <= 0 || !!uploading" @click="photosInput?.click()">
+      <button type="button" class="flex h-16 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border bg-surface px-1.5 py-px text-[12px] font-bold text-text disabled:cursor-not-allowed disabled:opacity-50" :disabled="remaining <= 0 || !!uploading" @click="photosInput?.click()">
         <AppIcon name="image" :size="16" /><span>Photos</span>
       </button>
     </div>
@@ -113,78 +113,3 @@ defineExpose({ pick: () => filesInput.value?.click() });
   </section>
   <p v-for="error in errors" :key="error" class="alert alert-error" role="alert"><AppIcon name="circle-exclamation" :size="14" />{{ error }}</p>
 </template>
-
-<style scoped>
-.dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 22px;
-  border: 2px dashed rgb(5 150 105 / 0.4);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--primary-soft) 60%, transparent);
-  text-align: center;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.dropzone.dragging {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.dropzone.full {
-  border-color: rgb(225 29 72 / 0.4);
-  background: color-mix(in srgb, var(--danger-soft) 60%, transparent);
-}
-
-.cloud {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 8px;
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  color: var(--primary-strong);
-  box-shadow: var(--shadow-sm);
-}
-
-.title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.sources {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  width: 100%;
-  margin-top: 16px;
-}
-
-.source {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 64px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.source:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

@@ -72,10 +72,10 @@ function run(item: MenuItem) {
 </script>
 
 <template>
-  <div ref="root" class="menu-root" @click.stop @dblclick.stop>
+  <div ref="root" class="relative" @click.stop @dblclick.stop>
     <button
       ref="trigger"
-      class="icon-btn trigger"
+      class="icon-btn size-8"
       type="button"
       :aria-label="label"
       aria-haspopup="menu"
@@ -84,9 +84,17 @@ function run(item: MenuItem) {
       @click="open ? hide() : show()"
       @keydown="onTriggerKeydown"
     >
-      <span class="dots" aria-hidden="true">•••</span>
+      <span class="text-[8px] tracking-[1px]" aria-hidden="true">•••</span>
     </button>
-    <ul v-if="open" :id="menuId" class="menu" :class="{ up }" role="menu" :aria-label="label" @keydown="onMenuKeydown">
+    <ul
+      v-if="open"
+      :id="menuId"
+      class="absolute right-0 z-40 m-0 min-w-[210px] list-none rounded-md border bg-surface p-1.5 shadow-popover"
+      :class="up ? 'bottom-[calc(100%+4px)]' : 'top-[calc(100%+4px)]'"
+      role="menu"
+      :aria-label="label"
+      @keydown="onMenuKeydown"
+    >
       <li v-for="item in items" :key="item.label" role="none">
         <button
           ref="entries"
@@ -94,79 +102,14 @@ function run(item: MenuItem) {
           :role="item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'"
           :aria-checked="item.checked"
           tabindex="-1"
-          :class="{ danger: item.danger }"
+          class="flex w-full cursor-pointer items-center gap-2.5 rounded-sm bg-transparent px-2.5 py-[9px] text-left text-[13px] font-bold hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none"
+          :class="item.danger ? 'text-danger' : 'text-text'"
           @click="run(item)"
         >
-          <AppIcon :name="item.icon" :size="13" /><span class="grow">{{ item.label }}</span>
-          <AppIcon v-if="item.checked" name="check" :size="11" class="tick" />
+          <AppIcon :name="item.icon" :size="13" /><span class="min-w-0 flex-1">{{ item.label }}</span>
+          <AppIcon v-if="item.checked" name="check" :size="11" class="text-primary" />
         </button>
       </li>
     </ul>
   </div>
 </template>
-
-<style scoped>
-.menu-root {
-  position: relative;
-}
-
-.trigger {
-  width: 32px;
-  height: 32px;
-}
-
-.dots {
-  font-size: 8px;
-  letter-spacing: 1px;
-}
-
-.menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 40;
-  min-width: 210px;
-  margin: 0;
-  padding: 6px;
-  list-style: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.15);
-}
-
-.menu.up {
-  top: auto;
-  bottom: calc(100% + 4px);
-}
-
-.menu button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
-.menu button:hover,
-.menu button:focus-visible {
-  background: var(--surface-muted);
-  outline: none;
-}
-
-.menu button.danger {
-  color: var(--danger);
-}
-
-.tick {
-  color: var(--primary);
-}
-</style>
