@@ -48,7 +48,7 @@ const agentLabel = computed(() => {
   <div class="min-h-dvh">
     <!-- Desktop : barre latérale -->
     <aside class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-(--sidebar-width) lg:flex-col lg:gap-6 lg:border-r lg:bg-surface lg:px-4 lg:py-5" aria-label="Navigation principale">
-      <NuxtLink to="/" class="flex items-center gap-3 font-extrabold text-text">
+      <NuxtLink to="/panel" class="flex items-center gap-3 font-extrabold text-text">
         <span class="relative inline-flex size-10 items-center justify-center rounded-md bg-ink text-on-ink">
           <AppIcon name="microchip" :size="18" /><span class="absolute -top-[3px] -right-[3px] size-3 rounded-full ring-3 ring-surface" :class="online ? 'bg-primary-bright' : 'bg-muted'" />
         </span>

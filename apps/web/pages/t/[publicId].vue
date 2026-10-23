@@ -74,7 +74,7 @@ const STATE_ICON = 'mb-4 inline-flex size-24 items-center justify-center rounded
         <h1 class="text-2xl">Ce tag n'est pas reconnu</h1>
         <p class="text-white/60">Il a été désactivé, ou il appartient à un autre compte.</p>
       </div>
-      <div class="mt-auto grid grid-cols-[1fr] gap-3 pt-8"><NuxtLink to="/" :class="BUTTON_LIGHT">Retour à l'accueil</NuxtLink></div>
+      <div class="mt-auto grid grid-cols-[1fr] gap-3 pt-8"><NuxtLink to="/panel" :class="BUTTON_LIGHT">Retour à l'accueil</NuxtLink></div>
     </template>
 
     <template v-else-if="data && !data.routine">
@@ -127,7 +127,7 @@ const STATE_ICON = 'mb-4 inline-flex size-24 items-center justify-center rounded
           <button :class="BUTTON_GO" type="button" @click="launch">Lancer maintenant</button>
         </template>
         <template v-else-if="phase === 'cancelled'">
-          <NuxtLink to="/" :class="BUTTON_LIGHT">Accueil</NuxtLink>
+          <NuxtLink to="/panel" :class="BUTTON_LIGHT">Accueil</NuxtLink>
           <button :class="BUTTON_GO" type="button" @click="launch">Lancer quand même</button>
         </template>
         <template v-else-if="phase === 'done'">

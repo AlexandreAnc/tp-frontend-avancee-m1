@@ -117,7 +117,7 @@ describe.skipIf(skipDb)('résumé quotidien', () => {
     await runDigests(new Date('2026-11-14T07:10:00Z')); // 8h10
     await runDigests(new Date('2026-11-14T07:50:00Z')); // 8h50, même jour
     expect(digestsFor()).toHaveLength(1);
-    expect(digestsFor()[0]!.payload).toMatchObject({ title: 'Votre journée', url: '/' });
+    expect(digestsFor()[0]!.payload).toMatchObject({ title: 'Votre journée', url: '/panel' });
   });
 });
 

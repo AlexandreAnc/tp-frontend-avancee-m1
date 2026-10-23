@@ -97,7 +97,7 @@ async function runStep(userId: string, routine: RoutineRow, step: RoutineStep): 
       await createReminder(userId, { text: step.text, remindAt: new Date(Date.now() + step.offsetMinutes * 60_000), source: 'routine' });
       return { label: step.label, status: 'success', error: null };
     case 'notify':
-      await sendToUser(userId, { title: routine.name, body: step.text, url: '/', tag: `routine-${routine.id}` });
+      await sendToUser(userId, { title: routine.name, body: step.text, url: '/panel', tag: `routine-${routine.id}` });
       return { label: step.label, status: 'success', error: null };
     case 'agent': {
       const { conversationId } = await startConversation(userId, step.prompt);
