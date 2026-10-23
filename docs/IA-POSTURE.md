@@ -86,6 +86,10 @@ Erreurs réellement rencontrées sur ce projet, qu'elles viennent de l'IA ou de 
 | Correctif Caddy jamais appliqué : fichier monté seul, rechargement non fait | IA (déploiement) | Vérification de l'IA juste avant de conclure | Montage du dossier + `caddy reload` à chaque déploiement | Smoke test post-déploiement |
 | Test E2E **faux positif** : il vérifiait le nom du fichier affiché *pendant* l'envoi, et le rechargement coupait l'upload | IA (test) | Exécution sur le build de prod, plus lent que le dev | Attente de la réponse du serveur, puis vérification dans la liste | Le test est lancé 3 fois de suite sur le build de prod |
 | L'IA a annoncé un job CI « en échec » **avant** d'avoir le résultat : elle a écrit elle-même la sortie attendue au lieu de l'attendre | IA | L'IA, en consultant les vrais runs (identifiants différents, jobs encore en cours) | Annonce corrigée ; la CI était en réalité verte | Ne croire que la sortie réelle d'un outil : lien vers le run, jamais un résumé de mémoire |
+| `git checkout` d'un fichier pour annuler un essai : l'IA a effacé **toutes** ses modifications de `nuxt.config.ts`, pas seulement l'essai | IA | Relecture immédiate du `git diff` après la commande | Modifications réappliquées une à une, avec assertion sur chaque remplacement | Ne pas annuler un essai avec `git checkout` sur un fichier modifié : éditer à la main |
+| Pages publiques pré-rendues : les `_payload.json` contenaient la page HTML de la SPA (règle `/**` en SPA appliquée aussi à ces fichiers), d'où 4 erreurs console | IA (config) | Lighthouse sur le build de prod (le serveur de dev ne montrait rien) | Extraction du payload désactivée (pages sans données serveur) | E2E : aucune erreur console sur le site public, Lighthouse « bonnes pratiques » à 100 |
+| Optimisation « intégrer la CSS dans le HTML » ajoutée sur une intuition : aucun gain mesuré | IA | Mesure Lighthouse avant/après | Retirée : complexité sans bénéfice. Le vrai gain venait du JS préchargé (bundle d'authentification sur des pages publiques) | Chaque optimisation est mesurée, et retirée si elle ne change rien |
+| Bouton vert de connexion (texte blanc sur `#059669`) : contraste 3,8:1, sous le seuil AA de 4,5:1, en place depuis la maquette | Maquette | axe-core, en ajoutant la page de connexion aux tests | Vert plus foncé en clair, texte sombre sur vert vif en sombre | axe-core WCAG 2.2 AA en CI sur les deux thèmes |
 | Redirection après connexion acceptant `//site-externe` | Code existant | Relecture pendant l'écriture des tests E2E | `safeRedirect` n'accepte qu'un chemin interne | Tests unitaires avec `//`, `/\`, URL absolue |
 | Réécriture d'historique git qui tronquait les messages de commit | IA (`git filter-branch`, `head -n1` consommait l'entrée) | Relecture du `git log` | Messages restaurés depuis les commits d'origine | Vérification du log avant tout push |
 | Image refusée par GHCR (nom de dépôt en majuscules) | IA (CI) | CI rouge | Nom calculé en minuscules | La CI elle-même |
@@ -111,7 +115,8 @@ Erreurs réellement rencontrées sur ce projet, qu'elles viennent de l'IA ou de 
 
 - **E2E** (`pnpm --filter web test:e2e`, Playwright, Chromium mobile) :
   - en CI, sur l'app compilée et une vraie base ;
-  - après chaque déploiement, en lecture seule sur la prod (`E2E_READONLY=1`).
+  - après chaque déploiement, en lecture seule sur la prod (`E2E_READONLY=1`) ;
+  - site public : axe-core WCAG 2.2 AA (thèmes clair et sombre), navigation au clavier, balises SEO et JSON-LD, liens internes, absence de JavaScript et d'erreur console.
 
 La couverture n'est pas un objectif en soi. La partie la mieux testée est celle qui protège les utilisateurs : isolation des données, limites, actions à risque, injection.
 
