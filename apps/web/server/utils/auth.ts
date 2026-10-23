@@ -36,6 +36,11 @@ function createAuth() {
       enabled: true,
       window: 60,
       max: 30,
+      // Vérifiée à chaque changement de page, souvent depuis une même IP partagée (classe, entreprise) :
+      // lecture seule, on la laisse respirer. Connexion et inscription gardent les règles strictes par défaut.
+      customRules: {
+        '/get-session': { window: 60, max: 600 },
+      },
     },
     // IP du visiteur pour la limite par IP : posée par Caddy en prod (une seule valeur), localhost en dev.
     advanced: {
