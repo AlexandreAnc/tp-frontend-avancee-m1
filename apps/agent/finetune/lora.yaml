@@ -1,0 +1,21 @@
+# Entraînement LoRA de Qwen3-4B-Instruct-2507 sur les exemples du panel (mlx-lm, Apple Silicon).
+# Seule la réponse attendue compte dans la perte (`mask_prompt`) : le modèle apprend à agir, pas à recopier le contexte.
+model: Qwen/Qwen3-4B-Instruct-2507
+train: true
+fine_tune_type: lora
+mask_prompt: true
+num_layers: 16
+lora_parameters:
+  rank: 16
+  scale: 20.0
+  dropout: 0.05
+batch_size: 2
+grad_accumulation_steps: 4
+learning_rate: 1.0e-4
+max_seq_length: 4096
+grad_checkpoint: true
+steps_per_report: 10
+steps_per_eval: 50
+val_batches: 25
+save_every: 100
+seed: 0
