@@ -24,5 +24,9 @@
 	# Le service worker ne doit jamais être servi depuis un cache.
 	header /sw.js Cache-Control "no-cache"
 
-	reverse_proxy web:3000
+	# IP réelle du visiteur en une seule valeur (Better Auth refuse une chaîne X-Forwarded-For sans proxys déclarés).
+	# Fiable : l'app n'est joignable que par Caddy, et {client_ip} ne croit que les plages Cloudflare.
+	reverse_proxy web:3000 {
+		header_up X-Real-IP {client_ip}
+	}
 }

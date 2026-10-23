@@ -37,6 +37,10 @@ function createAuth() {
       window: 60,
       max: 30,
     },
+    // IP du visiteur pour la limite par IP : posée par Caddy en prod (une seule valeur), localhost en dev.
+    advanced: {
+      ipAddress: { ipAddressHeaders: ['x-real-ip'] },
+    },
   });
 }
 
