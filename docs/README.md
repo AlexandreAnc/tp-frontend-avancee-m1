@@ -1,6 +1,6 @@
 # PWA Agent IA (nom à définir)
 
-Projet TP — PWA sur le thème de l'IA agentique. La façon dont l'IA a été utilisée pour le construire (skills, revue de code, refactoring assisté, tests du code généré, limites) est décrite dans [`IA-POSTURE.md`](IA-POSTURE.md).
+Projet TP — PWA sur le thème de l'IA agentique. La façon dont l'IA a été utilisée pour le construire (skills, revue de code, refactoring assisté, tests du code généré, limites) est décrite dans [`IA-POSTURE.md`](IA-POSTURE.md). La consigne du TP et l’état de chaque exigence sont dans [`TP.md`](TP.md).
 
 Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une machine personnelle. L'utilisateur dépose ses fichiers dans un « drive », l'agent les analyse automatiquement, les fouille pour retrouver une information ou le bon document, et propose des actions (ex. ajouter un événement à Google Agenda) que l'utilisateur valide par **notification push**.
 
@@ -178,7 +178,19 @@ AGENT_NAME=macbook-pro
 OLLAMA_URL=http://localhost:11434
 CHAT_MODEL=...              # peut varier selon la machine
 EMBED_MODEL=...             # identique sur toutes les machines
+CHAT_CONTEXT=8192           # facultatif : fenêtre de contexte du chat (à fixer sur une machine de 8 Go)
+CHAT_THINKING=true          # facultatif : false coupe le raisonnement (déconseillé, voir ci-dessous)
 ```
+
+**Choisir le modèle de chat** : `EVAL_MODEL=<modèle> CHAT_CONTEXT=8192 pnpm --filter agent eval` lance 5 scénarios réels avec ce modèle : montant dans un document, action sur la maison, rappel tiré d'un document, deux domaines en parallèle, document piégé. Il vérifie les délégations, les outils, les arguments, les identifiants cités (aucun inventé) et la langue de la réponse.
+
+| Modèle | Mémoire chargée | Score | Durée des 5 scénarios (MacBook M5) | Adapté à |
+|---|---|---|---|---|
+| `gemma4:26b` | ~18 Go | 5/5 | 71 s | machine de 24 Go ou plus |
+| `qwen3:4b` (contexte 8 192) | 3,9 Go (+ 0,7 Go pour `bge-m3`) | 5/5, une fois sur deux avec un identifiant inventé | ~350 s | **Mac M2 de 8 Go** (modèle de prod actuel) |
+| `gemma4:e2b` | 7,9 Go | 4/5 (date de rappel fausse) | 54 s | trop lourd pour 8 Go malgré son nom |
+
+`qwen3:4b` ne lit pas les images : une photo déposée est refusée avec un message clair, les PDF et textes fonctionnent. Couper le raisonnement (`CHAT_THINKING=false`) ne fait rien gagner en vitesse et fait apparaître le raisonnement du modèle, en anglais, dans la réponse.
 
 ## Changer de machine pour l'agent
 

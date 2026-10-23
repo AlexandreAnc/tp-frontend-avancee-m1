@@ -16,7 +16,7 @@ export class LlmClient {
   private chatBackend: ChatBackend | null = null;
 
   constructor(
-    private readonly config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL'>,
+    private readonly config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL' | 'CHAT_CONTEXT'>,
     private readonly signal: AbortSignal,
     private readonly ollamaThinking: boolean,
     readonly supportsVision = false,
@@ -51,7 +51,8 @@ export class LlmClient {
       return this.chatBackend.chat({ messages: request.messages, tools: request.tools, think: request.think === true }, this.signal);
     }
     try {
-      return await this.ollama.chat({ ...request, model: this.config.CHAT_MODEL, stream: false });
+      const options = this.config.CHAT_CONTEXT ? { ...request.options, num_ctx: this.config.CHAT_CONTEXT } : request.options;
+      return await this.ollama.chat({ ...request, options, model: this.config.CHAT_MODEL, stream: false });
     } catch (error) {
       throw this.wrap(error);
     }
@@ -106,7 +107,7 @@ export async function listInstalledModels(ollamaUrl: string): Promise<InstalledM
 }
 
 /** Vérifie au démarrage que les modèles sont installés et ont les capacités nécessaires. */
-export async function checkModels(config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL'>): Promise<ModelCheck> {
+export async function checkModels(config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL'> & { CHAT_THINKING?: boolean }): Promise<ModelCheck> {
   const ollama = new Ollama({ host: config.OLLAMA_URL });
   const show = async (model: string) => {
     try {
@@ -123,5 +124,8 @@ export async function checkModels(config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT
   if (!embed.capabilities.includes('embedding')) {
     throw new Error(`Le modèle ${config.EMBED_MODEL} n'est pas un modèle d'embeddings`);
   }
-  return { supportsThinking: chat.capabilities.includes('thinking'), supportsVision: chat.capabilities.includes('vision') };
+  return {
+    supportsThinking: chat.capabilities.includes('thinking') && config.CHAT_THINKING !== false,
+    supportsVision: chat.capabilities.includes('vision'),
+  };
 }

@@ -118,6 +118,21 @@ Erreurs réellement rencontrées sur ce projet, qu'elles viennent de l'IA ou de 
   - après chaque déploiement, en lecture seule sur la prod (`E2E_READONLY=1`) ;
   - site public : axe-core WCAG 2.2 AA (thèmes clair et sombre), navigation au clavier, balises SEO et JSON-LD, liens internes, absence de JavaScript et d'erreur console.
 
+- **Évaluation de l'agent avec le vrai modèle** (`pnpm --filter agent eval`). Les tests unitaires utilisent un modèle factice : ils prouvent que la structure tient, pas que le modèle fait les bons choix. L'évaluation rejoue 5 scénarios sur un compte fictif et contrôle :
+  - les délégations et les outils appelés, avec leurs arguments ;
+  - l'exactitude de la réponse ;
+  - les identifiants inventés ;
+  - les fuites de raisonnement.
+
+  C'est elle qui a servi à choisir le modèle du Mac de 8 Go (tableau dans `docs/README.md`).
+
+**Ce que l'évaluation a appris, en la construisant :**
+
+- **Un test trop strict ment aussi.** Un scénario exigeait que la date de l'échéance soit trouvée dans les documents. Le modèle l'avait trouvée dans le planning, qui liste ces échéances, et avait créé le bon rappel. Le scénario juge désormais le résultat, plus le chemin.
+- **Les hallucinations se voient en relisant les réponses, pas les scores.** Une réponse notée « réussie » citait l'identifiant `123e4567-e89b-12d3-a456-426655440000`, l'UUID d'exemple des documentations. Le modèle l'avait inventé. Un contrôle refuse maintenant tout identifiant qu'aucun outil n'a renvoyé.
+- **Une option qui semble raisonnable peut être pire.** Couper le raisonnement de `qwen3:4b` ne l'accélère pas : il raisonne alors dans sa réponse, en anglais. Les contrôles laxistes passaient quand même ; un contrôle de langue l'attrape désormais.
+- **Le plus petit modèle n'est pas le plus rapide.** `gemma4:26b` n'active qu'une partie de ses paramètres à chaque mot et répond 5 fois plus vite que `qwen3:4b`, qui raisonne longuement. Le choix sur 8 Go est donc un compromis de mémoire, pas de vitesse.
+
 La couverture n'est pas un objectif en soi. La partie la mieux testée est celle qui protège les utilisateurs : isolation des données, limites, actions à risque, injection.
 
 ## 4. L'IA comme acteur : risques et garde-fous
