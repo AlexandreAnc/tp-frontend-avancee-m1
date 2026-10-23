@@ -1,6 +1,6 @@
 # PWA Agent IA (nom à définir)
 
-Projet TP — PWA sur le thème de l'IA agentique. La façon dont l'IA a été utilisée pour le construire (skills, revue de code, refactoring assisté, tests du code généré, limites) est décrite dans [`IA-POSTURE.md`](IA-POSTURE.md).
+Projet TP — PWA sur le thème de l'IA agentique. La façon dont l'IA a été utilisée pour le construire (skills, revue de code, refactoring assisté, tests du code généré, limites) est décrite dans [`IA-POSTURE.md`](IA-POSTURE.md). La consigne du TP et l’état de chaque exigence sont dans [`TP.md`](TP.md).
 
 Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une machine personnelle. L'utilisateur dépose ses fichiers dans un « drive », l'agent les analyse automatiquement, les fouille pour retrouver une information ou le bon document, et propose des actions (ex. ajouter un événement à Google Agenda) que l'utilisateur valide par **notification push**.
 
