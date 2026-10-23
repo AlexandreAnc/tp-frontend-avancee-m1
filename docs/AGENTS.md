@@ -131,12 +131,21 @@ export const ALLOWED_MIME_TYPES = [
 - Commits au format Conventional Commits (`feat:`, `fix:`, `refactor:`…).
 - Migrations Drizzle générées, jamais modifiées à la main après merge.
 - Gestion d'erreurs explicite : erreurs typées côté serveur, messages compréhensibles côté utilisateur.
-- Tests : services serveur et outils de l'agent en priorité (Vitest).
+- Tests : services serveur et outils de l'agent en priorité (Vitest), parcours critiques en E2E (Playwright, `apps/web/e2e`). Un outil qui agit a son cas dans `apps/agent/test/prompt-injection.test.ts`.
 - Styles : classes Tailwind directement dans les templates. Pas de couleur, rayon ou ombre en dur (hex, `rgb()`, px arbitraires) : on passe par les tokens du `@theme` (`bg-night/45`, `rounded-lg`, `shadow-popover`…), ce qui garde le thème clair / sombre cohérent. Les briques de base du design system (`.btn`, `.input`, `.card`, `.chip`, `.badge`, `.switch`…) sont écrites une fois dans `@layer components` de `main.css` et se combinent avec des utilitaires ; tout autre motif répété devient un composant Vue, pas une classe `@apply`. Un bloc `<style scoped>` n'est accepté que pour ce que Tailwind exprime mal (keyframes, sélecteurs sur du contenu injecté ou des pseudo-éléments complexes).
+
+## Travailler avec un agent de code
+
+- Skills du projet dans `.claude/skills/` : `scaffold-api-route` (route + service + test), `add-agent-tool` (outil d'un spécialiste), `review` (checklist de revue, aussi utilisée par la revue IA en CI). Les suivre plutôt que les habitudes génériques du modèle.
+- Le code généré est relu et compris avant d'être proposé. Un obstacle contourné (limite, erreur, test qui gêne) est **signalé**, jamais masqué.
+- Une correction de bug vient avec un test de non-régression dont on a vérifié qu'il échoue sans la correction.
+- Modifications par pull request : CI verte (lint, types, couverture, E2E) et réponse à chaque remarque de revue avant fusion.
+- Détails et retours d'expérience : `docs/IA-POSTURE.md`.
 
 ## Avant de considérer une tâche terminée
 
-- `pnpm typecheck`, `pnpm lint` et `pnpm test` passent.
+- `pnpm typecheck`, `pnpm lint` et `pnpm test:coverage` passent (les seuils de couverture ne baissent pas).
+- Un parcours utilisateur modifié (connexion, dépôt…) : `pnpm --filter web test:e2e` passe.
 - Les limites et le filtrage par `user_id` sont respectés pour tout nouveau code qui touche aux fichiers ou aux données utilisateur.
 - Tout nouveau message serveur ↔ agent est défini dans `packages/shared`.
 - Aucune action à effet de bord `confirm` ou `sensitive` n'est exécutée sans `pending_action` validée ; toute action `direct` est journalisée.
