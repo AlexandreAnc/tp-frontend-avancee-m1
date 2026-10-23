@@ -82,7 +82,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Le dossier, pas le fichier : un git pull remplace le fichier (nouvel inode) qu'un montage de fichier ne verrait pas.
+      - ./docker/caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
     logging: *logging

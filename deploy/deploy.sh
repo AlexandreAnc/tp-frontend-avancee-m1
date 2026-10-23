@@ -15,6 +15,8 @@ fi
 compose up -d db
 compose run --rm migrate
 compose up -d --remove-orphans web caddy
+# Config Caddy éventuellement modifiée par ce déploiement : rechargée sans coupure.
+compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force >/dev/null
 docker image prune -f >/dev/null
 
 echo "Déployé : https://$(grep '^DOMAIN=' .env | cut -d= -f2)"
