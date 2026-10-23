@@ -46,8 +46,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Mêmes variables que l'app : l'image sert aussi aux scripts d'admin (ex. pnpm agent-key:create <machine>).
+    env_file: apps/web/.env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-app}
+      BETTER_AUTH_URL: https://${DOMAIN}
 
   web:
     image: ${IMAGE_REPO:-ghcr.io/alexandreanc/dashia}-web:${IMAGE_TAG:-latest}
