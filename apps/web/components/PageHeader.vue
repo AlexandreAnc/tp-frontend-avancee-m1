@@ -6,7 +6,7 @@ const router = useRouter();
 function goBack(target: string | boolean) {
   if (typeof target === 'string') return navigateTo(target);
   if (window.history.length > 1) return router.back();
-  return navigateTo('/');
+  return navigateTo('/panel');
 }
 </script>
 

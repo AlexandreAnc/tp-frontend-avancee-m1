@@ -10,5 +10,5 @@ export function isSessionUnverifiable(error: { status?: number } | null | undefi
 
 /** Page où revenir après connexion : uniquement un chemin interne (`//site.com` ou `/\site.com` mènerait ailleurs). */
 export function safeRedirect(target: unknown): string {
-  return typeof target === 'string' && /^\/(?![/\\])/.test(target) ? target : '/';
+  return typeof target === 'string' && /^\/(?![/\\])/.test(target) ? target : '/panel';
 }

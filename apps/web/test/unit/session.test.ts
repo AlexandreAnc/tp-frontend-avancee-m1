@@ -23,7 +23,7 @@ describe('safeRedirect', () => {
 
   it('refuse toute destination hors de l’app', () => {
     for (const target of ['//evil.example', '/\\evil.example', 'https://evil.example', 'drive', ['/drive'], undefined]) {
-      expect(safeRedirect(target)).toBe('/');
+      expect(safeRedirect(target)).toBe('/panel');
     }
   });
 });
