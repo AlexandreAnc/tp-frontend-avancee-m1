@@ -1,0 +1,107 @@
+# CI : lint, types et tests (avec PostgreSQL + pgvector) sur chaque push et pull request.
+# CD : sur main, images construites ici (le VPS de 4 Go ne compile rien), publiées sur GHCR,
+# puis déployées sur le VPS par SSH (deploy/deploy.sh : pull, migrations, redémarrage).
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/dashia
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  image:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          target: runtime
+          push: true
+          tags: ${{ env.IMAGE_REPO }}-web:${{ github.sha }},${{ env.IMAGE_REPO }}-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Image migrate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          target: migrate
+          push: true
+          tags: ${{ env.IMAGE_REPO }}-migrate:${{ github.sha }},${{ env.IMAGE_REPO }}-migrate:latest
+          cache-from: type=gha
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Clé SSH du VPS
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Déploiement
+        env:
+          TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Le jeton GHCR (valable le temps du job) passe par stdin, jamais dans la ligne de commande.
+        run: |
+          printf '%s' "$TOKEN" | ssh -i ~/.ssh/id_deploy "$TARGET" \
+            "docker login ghcr.io -u ${{ github.actor }} --password-stdin >/dev/null \
+            && cd /opt/dashia && git fetch --quiet origin main && git reset --quiet --hard ${{ github.sha }} \
+            && IMAGE_REPO=${{ env.IMAGE_REPO }} IMAGE_TAG=${{ github.sha }} bash deploy/deploy.sh; \
+            status=\$?; docker logout ghcr.io >/dev/null; exit \$status"

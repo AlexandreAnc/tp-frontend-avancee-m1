@@ -101,10 +101,33 @@ Vérifications : `pnpm typecheck`, `pnpm lint`, `pnpm test` (les tests d'intégr
 
 ### Production (VPS)
 
-```bash
-docker compose --profile prod run --rm migrate
-docker compose --profile prod up -d web
+Le VPS n'héberge que l'app, la base et les fichiers : **4 Go de RAM suffisent** (≈ 400 Mo au repos). L'IA tourne sur la machine de l'agent, qui se connecte d'elle-même au VPS (aucun port à ouvrir chez soi).
+
 ```
+Cloudflare (proxy, SSL « Full ») ──► VPS : Caddy (80/443) ──► web (Nuxt/Nitro) ──► Postgres + pgvector, volume de fichiers
+                                                               ▲  WebSocket sortant wss://<domaine>/_agent
+                                           Mac : agent Node ──► Ollama natif (gemma4, bge-m3)
+```
+
+**CI/CD** (`.github/workflows/ci-cd.yml`) : chaque push et pull request lance lint, types et tests (PostgreSQL + pgvector). Sur `main`, les images sont construites par GitHub Actions et publiées sur GHCR (le VPS ne compile rien), puis déployées par SSH (`deploy/deploy.sh` : pull, migrations, redémarrage). Secrets de l'environnement `production` : `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé dédiée au déploiement), `VPS_KNOWN_HOSTS`.
+
+Mise en place (une fois) :
+
+1. **DNS** : enregistrement A du domaine vers l'IP du VPS, proxy Cloudflare activé, **SSL/TLS en mode « Full »** (en « Flexible », boucle de redirections). Caddy sert un certificat interne ; il ne fait confiance aux en-têtes d'IP que pour les plages Cloudflare.
+2. **VPS** (Ubuntu / Debian) :
+   ```bash
+   git clone https://github.com/AlexandreAnc/tp-frontend-avancee-m1.git /opt/dashia && cd /opt/dashia
+   sudo bash deploy/setup-vps.sh                          # swap 2 Go, pare-feu (22/80/443), Docker
+   bash deploy/init-env.sh <domaine> <email-admin>         # .env + apps/web/.env, secrets aléatoires
+   ```
+   Puis renseigner les secrets GitHub ci-dessus : le prochain push sur `main` déploie. Sans CI : `bash deploy/deploy.sh` (build sur le VPS).
+3. **Premier compte** : s'inscrire sur `https://<domaine>` avec l'e-mail admin, puis la page **Agents locaux** (menu, visible pour l'admin) pour créer la clé de la machine. Ajouter Face ID dans les réglages : les passkeys sont liées à ce domaine.
+4. **Mac** : créer `apps/agent/.env.production` (copie de `.env.example` avec `SERVER_URL=https://<domaine>` et la nouvelle `AGENT_KEY`), puis `bash deploy/install-agent-macos.sh` (agent lancé à l'ouverture de session, relancé s'il s'arrête, journal dans `~/Library/Logs/dashia-agent.log`). L'agent de dev (`.env`) peut tourner à côté, avec le même Ollama.
+5. **Sauvegardes** : `deploy/backup.sh` en cron (base + fichiers, 14 jours), à copier hors du VPS.
+
+Après un déploiement qui change le protocole serveur ↔ agent : `git pull` puis `launchctl kickstart -k gui/$(id -u)/fr.dashia.agent` sur la machine de l'agent.
+
+Connecteurs (optionnels) : renseigner `GOOGLE_*` / `HUE_*` dans `apps/web/.env` du VPS avec les URI de redirection `https://<domaine>/api/connectors/<google|hue>/callback`, puis relancer le déploiement.
 
 ### Variables de l'agent
 
@@ -122,7 +145,7 @@ EMBED_MODEL=...             # identique sur toutes les machines
 1. Générer une nouvelle clé d'agent dans l'admin.
 2. Installer Ollama et télécharger les modèles (même `EMBED_MODEL` partout).
 3. Copier le `.env` avec la nouvelle clé et le nom de la machine.
-4. Lancer l'agent (`pnpm --filter agent start` ou `docker compose up agent`).
+4. Lancer l'agent (`pnpm --filter agent start`, `bash deploy/install-agent-macos.sh` sur Mac, ou `docker compose --profile agent up -d agent`).
 
 Sur Mac, Ollama doit tourner nativement (pas dans Docker) pour profiter du GPU Apple Silicon.
 

@@ -1,0 +1,92 @@
+# Production sur un VPS (4 Go suffisent : l'IA tourne sur la machine de l'agent, pas ici), derrière le proxy Cloudflare.
+# Seul Caddy est exposé (80/443, certificat interne : Cloudflare présente le certificat public) ; la base et l'app restent sur le réseau Docker interne.
+# Images : construites par la CI (GHCR) ; `build` sert au déploiement manuel. Déploiement : deploy/deploy.sh. Variables : .env à la racine (voir .env.prod.example) + apps/web/.env.
+
+name: dashia
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    # Réglages pour un VPS de 4 Go partagé avec l'app.
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c work_mem=8MB
+      -c maintenance_work_mem=128MB
+      -c max_connections=30
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  migrate:
+    profiles: [tools]
+    image: ${IMAGE_REPO:-ghcr.io/alexandreanc/dashia}-migrate:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-app}
+
+  web:
+    image: ${IMAGE_REPO:-ghcr.io/alexandreanc/dashia}-web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: apps/web/.env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-app}
+      BETTER_AUTH_URL: https://${DOMAIN:?DOMAIN manquant dans .env}
+      STORAGE_DIR: /data/files
+      NODE_OPTIONS: --max-old-space-size=768
+    volumes:
+      - file-storage:/data/files
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *logging
+
+volumes:
+  db-data:
+  file-storage:
+  caddy-data:
+  caddy-config:
