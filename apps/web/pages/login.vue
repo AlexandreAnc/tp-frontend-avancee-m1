@@ -24,15 +24,10 @@ async function signInWithPasskey() {
       : 'Aucune passkey reconnue sur cet appareil. Connectez-vous avec votre e-mail puis ajoutez Face ID dans les réglages.';
     return;
   }
-  await navigateTo(redirectTarget());
+  await navigateTo(safeRedirect(route.query.redirect));
 }
 
 watch(mode, () => (error.value = null));
-
-function redirectTarget() {
-  const target = route.query.redirect;
-  return typeof target === 'string' && target.startsWith('/') ? target : '/';
-}
 
 async function submit() {
   error.value = null;
@@ -52,7 +47,7 @@ async function submit() {
     else error.value = failure.code === 'USER_ALREADY_EXISTS' ? 'Un compte existe déjà avec cet e-mail.' : failure.message ?? 'Inscription impossible.';
     return;
   }
-  await navigateTo(mode.value === 'register' ? '/bienvenue' : redirectTarget());
+  await navigateTo(mode.value === 'register' ? '/bienvenue' : safeRedirect(route.query.redirect));
 }
 </script>
 
