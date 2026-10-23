@@ -31,7 +31,8 @@ export function usePageSeo(page: PageSeo) {
     twitterCard: 'summary_large_image',
     articlePublishedTime: page.publishedAt,
     articleModifiedTime: page.updatedAt,
-    robots: 'index, follow, max-image-preview:large',
+    // Projet de cours : pas d'indexation, même si une page est trouvée par un lien externe.
+    robots: SITE.indexable ? 'index, follow, max-image-preview:large' : 'noindex, nofollow',
   });
   useHead({
     link: [{ rel: 'canonical', href: url }],

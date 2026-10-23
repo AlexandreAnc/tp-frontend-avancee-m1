@@ -1,9 +1,18 @@
 import { defineEventHandler, setHeader } from 'h3';
-import { absoluteUrl } from '#shared/site';
+import { SITE, absoluteUrl } from '#shared/site';
 
-/** Seul le site public est indexable : l'app et l'API sont réservées aux comptes. */
+/** Projet de cours : tout est bloqué. Site indexable : seul le site public l'est, l'app et l'API sont réservées aux comptes. */
 export default defineEventHandler((event) => {
   setHeader(event, 'content-type', 'text/plain; charset=utf-8');
+  if (!SITE.indexable) {
+    return [
+      '# DashIA est un projet de cours (TP de Master 1), pas un service commercial.',
+      '# Merci de ne rien explorer ni indexer : les contenus du blog sont fictifs.',
+      'User-agent: *',
+      'Disallow: /',
+      '',
+    ].join('\n');
+  }
   return [
     'User-agent: *',
     'Allow: /$',

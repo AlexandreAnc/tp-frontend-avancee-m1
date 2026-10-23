@@ -6,6 +6,11 @@ export const SITE = {
   tagline: 'Votre assistant IA personnel, qui travaille chez vous',
   description: "DashIA est un assistant IA personnel : il range et comprend vos documents, gère vos échéances et pilote votre maison, avec un modèle qui tourne sur votre propre machine.",
   locale: 'fr_FR',
+  /**
+   * Projet de cours : rien n'est exploré ni indexé (robots.txt + meta robots).
+   * Passer à `true` pour une vraie mise en ligne : tout le SEO (sitemap, JSON-LD, llms.txt) est déjà prêt.
+   */
+  indexable: false,
 } as const;
 
 /** Pages du site public (pré-rendues, indexées) ; tout le reste est l'app, réservée aux comptes. */

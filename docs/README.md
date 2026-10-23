@@ -57,6 +57,7 @@ L'app est une SPA (le panel est sur `/panel`). Le site public est **pré-rendu e
 - JSON-LD schema.org : `Organization`, `WebSite`, `SoftwareApplication`, `FAQPage`, `Blog`, `BlogPosting`, `BreadcrumbList`.
 - `sitemap.xml` et `robots.txt` (seul le site public est indexable).
 - Une vraie 404 pour un article inconnu.
+- **Projet de cours : rien n'est indexé.** `robots.txt` bloque tous les robots (avec un commentaire qui l'explique) et chaque page porte `noindex, nofollow`. Pour une vraie mise en ligne, passer `SITE.indexable` à `true` (`apps/web/shared/site.ts`) : le SEO ci-dessus s'active tel quel.
 
 **GEO** (moteurs de réponse et assistants IA).
 - Chaque article s'ouvre sur un « En bref » qui donne la réponse d'abord, et se termine par une FAQ balisée.

@@ -62,6 +62,7 @@ test.describe('SEO et GEO', () => {
       expect((await page.title()).length).toBeGreaterThan(20);
       expect(await page.locator('meta[name="description"]').getAttribute('content')).toMatch(/.{100,}/);
       expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toMatch(new RegExp(`${path === '/' ? '/' : path}$`));
+      expect(await page.locator('meta[name="robots"]').getAttribute('content')).toBe('noindex, nofollow');
       expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toMatch(/og-image\.png$/);
       const jsonLd = await page.locator('script[type="application/ld+json"]').allTextContents();
       expect(jsonLd.length).toBeGreaterThan(0);
@@ -90,8 +91,9 @@ test.describe('SEO et GEO', () => {
     const sitemap = await (await request.get('/sitemap.xml')).text();
     for (const path of PUBLIC_PAGES) expect(sitemap).toContain(`${path === '/' ? '' : path}</loc>`);
     const robots = await (await request.get('/robots.txt')).text();
-    expect(robots).toMatch(/Disallow: \/\n/);
-    expect(robots).toContain('Sitemap: ');
+    // Projet de cours : rien n'est exploré ni indexé.
+    expect(robots).toContain('# DashIA est un projet de cours');
+    expect(robots).toMatch(/User-agent: \*\nDisallow: \/\n/);
     const llms = await (await request.get('/llms.txt')).text();
     expect(llms).toMatch(/^# DashIA/);
     for (const article of ARTICLES) expect(llms).toContain(article.title);
