@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/.nuxt/**', '**/.output/**', '**/dist/**', '**/.data/**', '**/server/db/migrations/**'],
+    ignores: ['**/node_modules/**', '**/.nuxt/**', '**/.output/**', '**/dist/**', '**/.data/**', '**/server/db/migrations/**', '**/coverage/**', '**/playwright-report/**', '**/test-results/**'],
   },
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],

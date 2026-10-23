@@ -1,6 +1,6 @@
 # PWA Agent IA (nom à définir)
 
-Projet TP — PWA sur le thème de l'IA agentique.
+Projet TP — PWA sur le thème de l'IA agentique. La façon dont l'IA a été utilisée pour le construire (skills, revue de code, refactoring assisté, tests du code généré, limites) est décrite dans [`IA-POSTURE.md`](IA-POSTURE.md).
 
 Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une machine personnelle. L'utilisateur dépose ses fichiers dans un « drive », l'agent les analyse automatiquement, les fouille pour retrouver une information ou le bon document, et propose des actions (ex. ajouter un événement à Google Agenda) que l'utilisateur valide par **notification push**.
 
@@ -99,6 +99,8 @@ Dans `apps/web/.env` : `BETTER_AUTH_SECRET` et `ENCRYPTION_KEY` (`openssl rand -
 Philips Hue (optionnel) : créez une application sur developers.meethue.com (« Remote Hue API »), avec l'URI de redirection `<BETTER_AUTH_URL>/api/connectors/hue/callback`, puis renseignez `HUE_CLIENT_ID` / `HUE_CLIENT_SECRET`. La connexion se fait depuis la page Maison ; l'appairage du pont est automatique.
 
 Vérifications : `pnpm typecheck`, `pnpm lint`, `pnpm test` (les tests d'intégration utilisent une base `app_test` créée automatiquement dans le conteneur `db`).
+- `pnpm test:coverage` : mêmes tests avec mesure de couverture et seuils minimums (rapport HTML dans `coverage/` de chaque paquet).
+- `pnpm --filter web test:e2e` : parcours de bout en bout dans Chromium (Playwright), contre le serveur de dev s'il tourne, sinon contre le build (`pnpm --filter web build`). Première fois : `pnpm --filter web exec playwright install chromium`. Contre la prod, en lecture seule : `E2E_BASE_URL=https://… E2E_READONLY=1 pnpm --filter web test:e2e`.
 
 ### Production (VPS)
 
@@ -110,7 +112,9 @@ Cloudflare (proxy, SSL « Full ») ──► VPS : Caddy (80/443) ──► web 
                                            Mac : agent Node ──► Ollama natif (gemma4, bge-m3)
 ```
 
-**CI/CD** (`.github/workflows/ci-cd.yml`) : chaque push et pull request lance lint, types et tests (PostgreSQL + pgvector). Sur `main`, les images sont construites par GitHub Actions et publiées sur GHCR (le VPS ne compile rien), puis déployées par SSH (`deploy/deploy.sh` : pull, migrations, redémarrage). Secrets de l'environnement `production` : `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé dédiée au déploiement), `VPS_KNOWN_HOSTS`.
+**CI/CD** (`.github/workflows/ci-cd.yml`) : chaque push et pull request lance lint, types, tests avec seuils de couverture (PostgreSQL + pgvector) et le parcours E2E dans Chromium contre l'app compilée. Après chaque déploiement, un smoke test vérifie la prod sans y écrire. Sur `main`, les images sont construites par GitHub Actions et publiées sur GHCR (le VPS ne compile rien), puis déployées par SSH (`deploy/deploy.sh` : pull, migrations, redémarrage). Secrets de l'environnement `production` : `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé dédiée au déploiement), `VPS_KNOWN_HOSTS`. Variable facultative `PROD_URL` (URL testée par le smoke test).
+
+**Revue de code IA** (`.github/workflows/ai-review.yml`) : sur chaque pull request, Claude relit le diff avec la checklist `.claude/skills/review` et commente en ligne. Activée en ajoutant le secret de dépôt `ANTHROPIC_API_KEY` (facturé sur ce compte), ignorée sinon. Chaque remarque reçoit une réponse : corrigée ou rejetée avec un argument.
 
 Mise en place (une fois) :
 

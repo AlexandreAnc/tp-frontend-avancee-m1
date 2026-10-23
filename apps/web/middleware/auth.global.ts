@@ -4,8 +4,7 @@ const PUBLIC_ROUTES = new Set(['/login']);
 async function fetchSession() {
   try {
     const { data, error } = await authClient.getSession();
-    // Requête non aboutie (pas de statut), limite de débit ou panne serveur : session inconnue, pas « déconnecté ».
-    if (error && (!error.status || error.status === 429 || error.status >= 500)) return undefined;
+    if (isSessionUnverifiable(error)) return undefined;
     return data;
   } catch {
     return undefined;

@@ -1,0 +1,53 @@
+# Revue de code par IA sur chaque pull request : un avis de plus, jamais une validation.
+# Elle suit la même checklist qu'un humain (.claude/skills/review/SKILL.md) et commente en ligne.
+# C'est l'auteur qui tranche : chaque remarque est acceptée (commit) ou rejetée avec une réponse argumentée.
+# Inactive tant que le secret ANTHROPIC_API_KEY n'est pas défini (Settings → Secrets → Actions).
+name: AI review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - name: Clé absente
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::ANTHROPIC_API_KEY non défini, revue IA ignorée."
+      - uses: actions/checkout@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        if: env.HAS_KEY == 'true'
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Tu fais la revue de cette pull request. La branche est déjà extraite dans le dossier courant.
+            Lis d'abord docs/AGENTS.md (règles du projet) puis applique la checklist de .claude/skills/review/SKILL.md.
+
+            - Ne signale que ce qui compte : bug, faille, règle du projet enfreinte, test manquant sur un comportement nouveau.
+              Pas de remarque de style que le linter couvre déjà.
+            - Chaque remarque dit pourquoi c'est un problème et propose une correction. Si tu n'es pas sûr, dis-le.
+            - Remarques précises : mcp__github_inline_comment__create_inline_comment (avec confirmed: true).
+            - Synthèse : un seul `gh pr comment`, en français, avec le verdict (à corriger / remarques mineures / rien à signaler).
+            - Ne poste que des commentaires GitHub, rien d'autre.
+          claude_args: |
+            --model claude-opus-5-5
+            --max-turns 30
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"
