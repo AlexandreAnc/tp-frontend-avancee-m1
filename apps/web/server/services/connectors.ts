@@ -2,9 +2,9 @@ import { and, eq } from 'drizzle-orm';
 import { db, schema } from '../db';
 import type { ConnectorProvider } from '../db/schema';
 import { createOAuthClient, isGoogleConfigured, type GoogleOAuthClient } from '../connectors/google/oauth';
-import { isHueConfigured } from '../connectors/hue/api';
 import { decrypt, encrypt } from '../utils/crypto';
 import { AppError } from '../utils/errors';
+import { getHueApp } from './hue';
 
 const { connectors } = schema;
 
@@ -14,7 +14,7 @@ export async function listConnectors(userId: string) {
     const row = rows.find((candidate) => candidate.provider === provider);
     return { provider, label, available, connected: Boolean(row), connectedAt: row?.createdAt.toISOString() ?? null };
   };
-  return [entry('google', 'Google Agenda', isGoogleConfigured()), entry('hue', 'Philips Hue', isHueConfigured())];
+  return [entry('google', 'Google Agenda', isGoogleConfigured()), entry('hue', 'Philips Hue', (await getHueApp(userId)) !== null)];
 }
 
 export async function hasConnector(userId: string, provider: ConnectorProvider): Promise<boolean> {

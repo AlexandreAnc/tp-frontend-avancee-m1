@@ -92,6 +92,13 @@
       "when": 1792703477570,
       "tag": "0012_unlock-pin",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792747639714,
+      "tag": "0013_ai-providers-connector-apps",
+      "breakpoints": true
     }
   ]
 }

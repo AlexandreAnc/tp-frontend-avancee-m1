@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3';
 import { getQuery, getRouterParam, readBody } from 'h3';
+import { aiProviderSchema, type ExternalAiProvider } from '@app/shared';
 import { z } from 'zod';
 import { AppError } from './errors';
 
@@ -21,6 +22,11 @@ export function getValidatedQueryOrThrow<T extends z.ZodType>(event: H3Event, sc
 
 export function getUuidParam(event: H3Event, name = 'id'): string {
   return parse(z.uuid(), getRouterParam(event, name));
+}
+
+/** Fournisseur d'IA externe dans l'URL (`/api/ai/keys/:provider`). */
+export function getExternalAiProviderParam(event: H3Event): ExternalAiProvider {
+  return parse(aiProviderSchema.exclude(['dashia']), getRouterParam(event, 'provider'));
 }
 
 export { parse as parseOrThrow };

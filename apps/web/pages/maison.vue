@@ -3,7 +3,6 @@ useHead({ title: 'Maison · DashIA' });
 
 const route = useRoute();
 const { home, loading, busy, refresh, toggleRoom, dimRoom, allOff, scene, toggleLight, lightsOn } = useHome();
-const { data: connectorsData } = await useFetch('/api/connectors', { key: 'connectors' });
 const { ask } = useConfirm();
 const selectedRoomId = ref<string | null>(null);
 
@@ -15,7 +14,6 @@ const STATUS_MESSAGES: Record<string, { tone: string; text: string }> = {
   error: { tone: 'alert-error', text: 'La connexion à Philips Hue a échoué. Vérifiez que le pont est en ligne puis réessayez.' },
 };
 const status = computed(() => (typeof route.query.status === 'string' ? STATUS_MESSAGES[route.query.status] : null));
-const hueConnector = computed(() => connectorsData.value?.connectors.find((connector) => connector.provider === 'hue'));
 
 const rooms = computed(() => (home.value?.rooms ?? []).filter((room) => room.kind === 'room'));
 const zones = computed(() => (home.value?.rooms ?? []).filter((room) => room.kind === 'zone'));
@@ -60,8 +58,7 @@ async function disconnect() {
           <li><strong>2.</strong> DashIA appaire votre pont automatiquement.</li>
           <li><strong>3.</strong> Vos pièces apparaissent ici. Les lumières ne demandent pas de validation, et chaque action est annulable.</li>
         </ol>
-        <a v-if="hueConnector?.available" class="btn btn-primary btn-xl btn-block btn-shadow" href="/api/connectors/hue/connect">Connecter Philips Hue</a>
-        <p v-else class="alert alert-warning">Le connecteur Hue n'est pas configuré sur le serveur (HUE_CLIENT_ID / HUE_CLIENT_SECRET, voir le README).</p>
+        <HomeHueAppSetup />
       </section>
 
       <template v-else>

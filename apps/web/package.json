@@ -17,6 +17,7 @@
     "vapid:generate": "web-push generate-vapid-keys"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.132.1",
     "@app/shared": "workspace:*",
     "@better-auth/passkey": "1.7.12",
     "@fontsource-variable/manrope": "^5.3.0",

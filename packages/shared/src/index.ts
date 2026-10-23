@@ -3,6 +3,7 @@ export * from './models';
 export * from './analysis';
 export * from './actions';
 export * from './tasks';
+export * from './ai-providers';
 export * from './specialists';
 export * from './steps';
 export * from './protocol';

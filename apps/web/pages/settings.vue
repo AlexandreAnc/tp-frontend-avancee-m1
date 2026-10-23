@@ -199,6 +199,8 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         </div>
       </section>
 
+      <SettingsAiProviders />
+
       <SettingsGroup title="Agent local">
         <SettingsRow icon="desktop" tone="tone-ink" :title="agent?.name ?? 'Aucun agent connecté'" :subtitle="agent ? `${agent.activeTasks} tâche(s) en cours` : 'Lancez l’agent sur votre PC'">
           <span class="badge" :class="online ? 'tone-primary' : ''">{{ online ? 'En ligne' : 'Hors ligne' }}</span>

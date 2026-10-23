@@ -7,7 +7,8 @@ import { TASK_TYPES } from './tasks';
  * À incrémenter à chaque changement incompatible d'un message ci-dessous.
  */
 // v2 : étapes multi-agents (orchestrateur, délégations aux spécialistes).
-export const PROTOCOL_VERSION = 2;
+// v3 : l'agent lit l'IA de conversation de l'utilisateur (`GET /api/agent/llm`).
+export const PROTOCOL_VERSION = 3;
 
 export const AGENT_WS_PATH = '/_agent';
 

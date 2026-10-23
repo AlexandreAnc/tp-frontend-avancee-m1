@@ -32,6 +32,8 @@ describe('buildHomeState', () => {
   });
 });
 
+const APP = { clientId: 'hue-client', clientSecret: 'hue-secret' };
+
 describe('HueApi', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -41,7 +43,7 @@ describe('HueApi', () => {
       calls.push({ url: String(url), init });
       return new Response(JSON.stringify({ data: [], errors: [] }), { status: 200 });
     }));
-    const api = new HueApi({ accessToken: 'token-1', refreshToken: null, expiresAt: null }, 'app-key', async () => {});
+    const api = new HueApi(APP, { accessToken: 'token-1', refreshToken: null, expiresAt: null }, 'app-key', async () => {});
 
     await api.setGroupedLight('gl-salon', { on: false });
     expect(calls[0]!.url).toBe('https://api.meethue.com/route/clip/v2/resource/grouped_light/gl-salon');
@@ -57,7 +59,7 @@ describe('HueApi', () => {
       JSON.stringify(String(url).endsWith('/route/api') ? [{ success: { username: 'cle-pont' } }] : [{ success: {} }]),
       { status: 200 },
     )));
-    await expect(new HueApi({ accessToken: 't', refreshToken: null, expiresAt: null }, null, async () => {}).linkApplication()).resolves.toBe('cle-pont');
+    await expect(new HueApi(APP, { accessToken: 't', refreshToken: null, expiresAt: null }, null, async () => {}).linkApplication()).resolves.toBe('cle-pont');
   });
 
   it("rafraîchit un token sur le point d'expirer et garde l'ancien refresh token", async () => {
@@ -68,7 +70,7 @@ describe('HueApi', () => {
         : JSON.stringify({ data: [], errors: [] }),
       { status: 200 },
     )));
-    const api = new HueApi({ accessToken: 'token-1', refreshToken: 'refresh-1', expiresAt: new Date(Date.now() + 1000) }, 'k', async (tokens) => void saved.push(tokens));
+    const api = new HueApi(APP, { accessToken: 'token-1', refreshToken: 'refresh-1', expiresAt: new Date(Date.now() + 1000) }, 'k', async (tokens) => void saved.push(tokens));
     await api.recallScene('scene-lecture');
     expect(saved).toEqual([expect.objectContaining({ accessToken: 'token-2', refreshToken: 'refresh-1' })]);
   });

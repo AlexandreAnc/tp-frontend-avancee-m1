@@ -14,34 +14,33 @@ interface TokenResponse {
   expires_in?: number;
 }
 
-function credentials() {
-  const env = getEnv();
-  if (!env.HUE_CLIENT_ID || !env.HUE_CLIENT_SECRET) {
-    throw new AppError('connector_missing', "Le connecteur Philips Hue n'est pas configuré sur le serveur");
-  }
-  return { clientId: env.HUE_CLIENT_ID, clientSecret: env.HUE_CLIENT_SECRET, baseUrl: env.HUE_API_URL };
+/** Application OAuth Philips (developers.meethue.com) : celle de l'utilisateur, ou celle du serveur par défaut. */
+export interface HueApp {
+  clientId: string;
+  clientSecret: string;
 }
 
-export function isHueConfigured(): boolean {
+/** Application Hue du serveur (variables d'environnement), si l'opérateur en a configuré une. */
+export function serverHueApp(): HueApp | null {
   const env = getEnv();
-  return Boolean(env.HUE_CLIENT_ID && env.HUE_CLIENT_SECRET);
+  return env.HUE_CLIENT_ID && env.HUE_CLIENT_SECRET ? { clientId: env.HUE_CLIENT_ID, clientSecret: env.HUE_CLIENT_SECRET } : null;
 }
+
+const baseUrl = () => getEnv().HUE_API_URL;
 
 export const HUE_CALLBACK_PATH = '/api/connectors/hue/callback';
 
-export function getHueAuthorizationUrl(state: string): string {
-  const { clientId, baseUrl } = credentials();
-  const url = new URL('/v2/oauth2/authorize', baseUrl);
-  url.search = new URLSearchParams({ client_id: clientId, response_type: 'code', state }).toString();
+export function getHueAuthorizationUrl(app: HueApp, state: string): string {
+  const url = new URL('/v2/oauth2/authorize', baseUrl());
+  url.search = new URLSearchParams({ client_id: app.clientId, response_type: 'code', state }).toString();
   return url.toString();
 }
 
-async function requestTokens(body: Record<string, string>): Promise<HueTokens> {
-  const { clientId, clientSecret, baseUrl } = credentials();
-  const response = await fetch(new URL('/v2/oauth2/token', baseUrl), {
+async function requestTokens(app: HueApp, body: Record<string, string>): Promise<HueTokens> {
+  const response = await fetch(new URL('/v2/oauth2/token', baseUrl()), {
     method: 'POST',
     headers: {
-      authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      authorization: `Basic ${Buffer.from(`${app.clientId}:${app.clientSecret}`).toString('base64')}`,
       'content-type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams(body),
@@ -55,8 +54,8 @@ async function requestTokens(body: Record<string, string>): Promise<HueTokens> {
   };
 }
 
-export function exchangeHueCode(code: string): Promise<HueTokens> {
-  return requestTokens({ grant_type: 'authorization_code', code });
+export function exchangeHueCode(app: HueApp, code: string): Promise<HueTokens> {
+  return requestTokens(app, { grant_type: 'authorization_code', code });
 }
 
 /**
@@ -65,6 +64,7 @@ export function exchangeHueCode(code: string): Promise<HueTokens> {
  */
 export class HueApi {
   constructor(
+    private readonly app: HueApp,
     private tokens: HueTokens,
     private readonly applicationKey: string | null,
     private readonly onTokens: (tokens: HueTokens) => Promise<void>,
@@ -74,7 +74,7 @@ export class HueApi {
     const expiresSoon = this.tokens.expiresAt && this.tokens.expiresAt.getTime() - Date.now() < 60_000;
     if (expiresSoon && this.tokens.refreshToken) {
       const previousRefreshToken = this.tokens.refreshToken;
-      const next = await requestTokens({ grant_type: 'refresh_token', refresh_token: previousRefreshToken });
+      const next = await requestTokens(this.app, { grant_type: 'refresh_token', refresh_token: previousRefreshToken });
       // Philips ne renvoie pas toujours de nouveau refresh token : on garde l'ancien.
       this.tokens = { ...next, refreshToken: next.refreshToken ?? previousRefreshToken };
       await this.onTokens(this.tokens);
@@ -83,13 +83,12 @@ export class HueApi {
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const { baseUrl } = credentials();
     const headers = new Headers(init.headers);
     headers.set('authorization', `Bearer ${await this.accessToken()}`);
     if (this.applicationKey) headers.set('hue-application-key', this.applicationKey);
     if (init.body) headers.set('content-type', 'application/json');
 
-    const response = await fetch(new URL(path, baseUrl), { ...init, headers });
+    const response = await fetch(new URL(path, baseUrl()), { ...init, headers });
     if (response.status === 401) throw new AppError('connector_missing', 'La connexion Philips Hue a expiré : reconnectez-la dans les réglages.');
     if (!response.ok) throw new AppError('upstream', `Votre pont Hue ne répond pas (${response.status}).`);
     return response.json() as Promise<T>;

@@ -17,6 +17,7 @@ Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une ma
   - **500 Mo de stockage par compte**, corbeille comprise (pas de limite sur le nombre de fichiers)
 - **Analyse automatique à l'upload** : type de document, résumé, infos clés (dates, montants, noms), suggestions d'actions.
 - **Chat multi-agents** : un **orchestrateur** découpe la demande et la confie à des **spécialistes** (Documents, Planning, Maison), chacun limité à ses propres outils. Les sous-tâches indépendantes tournent en parallèle, les dépendantes s'enchaînent, puis l'orchestrateur rédige la réponse. La timeline affiche en direct qui fait quoi.
+- **IA au choix** : par défaut l'IA du service (DashIA, modèle local via Ollama). Chaque utilisateur peut brancher sa propre clé **Claude, ChatGPT, Mistral ou Gemini** (Réglages → Intelligence artificielle) : clé vérifiée, chiffrée, modèle au choix dans la liste du fournisseur. Seule la conversation passe par ce fournisseur ; l'analyse, la recherche et les embeddings restent sur DashIA.
 - **Connecteurs** : Google Agenda pour commencer, architecture MCP pour en ajouter d'autres.
 - **Validation humaine** : les actions qui comptent passent par une confirmation (notification push avec boutons, ou carte dans l'app) ; les actions sans risque (lampes, rappels) sont directes. Détail des niveaux de risque et des évolutions (panel, rappels, Philips Hue, routines NFC, passkeys) dans [`SCOPE.md`](SCOPE.md) ; inventaire des écrans pour la maquette dans [`FONCTIONNALITES.md`](FONCTIONNALITES.md).
 - **PWA** : installable, historique consultable hors ligne, file d'attente quand l'agent est indisponible, notifications push.
@@ -127,7 +128,7 @@ Mise en place (une fois) :
 
 Après un déploiement qui change le protocole serveur ↔ agent : `git pull` puis `launchctl kickstart -k gui/$(id -u)/fr.dashia.agent` sur la machine de l'agent.
 
-Connecteurs (optionnels) : renseigner `GOOGLE_*` / `HUE_*` dans `apps/web/.env` du VPS avec les URI de redirection `https://<domaine>/api/connectors/<google|hue>/callback`, puis relancer le déploiement.
+Connecteurs (optionnels) : renseigner `GOOGLE_*` / `HUE_*` dans `apps/web/.env` du VPS (pour Hue, chaque utilisateur peut aussi renseigner sa propre application Philips depuis la page Maison, sans configuration serveur) avec les URI de redirection `https://<domaine>/api/connectors/<google|hue>/callback`, puis relancer le déploiement.
 
 ### Variables de l'agent
 

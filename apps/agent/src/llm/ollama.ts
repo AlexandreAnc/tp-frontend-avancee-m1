@@ -1,18 +1,24 @@
 import { EMBEDDING_DIMENSIONS } from '@app/shared';
-import { Ollama, type ChatRequest, type ChatResponse } from 'ollama';
+import { Ollama, type ChatRequest } from 'ollama';
 import type { AgentConfig } from '../config';
 import { TaskError } from '../tasks/errors';
+import type { ChatBackend, ChatMessage } from './chat-backend';
 
 const EMBED_BATCH_SIZE = 16;
 
-/** Accès à Ollama pour une tâche : toutes les requêtes sont interrompues si la tâche est annulée. */
+/**
+ * Accès aux modèles pour une tâche : toutes les requêtes sont interrompues si la tâche est annulée.
+ * Les embeddings passent toujours par Ollama ; la conversation peut passer par le fournisseur choisi
+ * par l'utilisateur (`withChatBackend`).
+ */
 export class LlmClient {
   private readonly ollama: Ollama;
+  private chatBackend: ChatBackend | null = null;
 
   constructor(
     private readonly config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL'>,
     private readonly signal: AbortSignal,
-    readonly supportsThinking: boolean,
+    private readonly ollamaThinking: boolean,
     readonly supportsVision = false,
   ) {
     this.ollama = new Ollama({
@@ -21,15 +27,29 @@ export class LlmClient {
     });
   }
 
+  /** Même accès (Ollama, annulation), conversation déléguée au fournisseur externe. */
+  withChatBackend(backend: ChatBackend): LlmClient {
+    const client = new LlmClient(this.config, this.signal, this.ollamaThinking, this.supportsVision);
+    client.chatBackend = backend;
+    return client;
+  }
+
+  get supportsThinking() {
+    return this.chatBackend ? this.chatBackend.supportsThinking : this.ollamaThinking;
+  }
+
   get chatModel() {
-    return this.config.CHAT_MODEL;
+    return this.chatBackend ? `${this.chatBackend.label} · ${this.chatBackend.model}` : this.config.CHAT_MODEL;
   }
 
   get embedModel() {
     return this.config.EMBED_MODEL;
   }
 
-  async chat(request: Omit<ChatRequest, 'model' | 'stream'>): Promise<ChatResponse> {
+  async chat(request: Omit<ChatRequest, 'model' | 'stream' | 'messages'> & { messages: ChatMessage[] }): Promise<{ message: ChatMessage }> {
+    if (this.chatBackend) {
+      return this.chatBackend.chat({ messages: request.messages, tools: request.tools, think: request.think === true }, this.signal);
+    }
     try {
       return await this.ollama.chat({ ...request, model: this.config.CHAT_MODEL, stream: false });
     } catch (error) {

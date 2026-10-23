@@ -112,6 +112,11 @@ export const ALLOWED_MIME_TYPES = [
   - Un nouvel outil = l'ajouter à un spécialiste ; un nouveau domaine = un nouveau spécialiste (prompt dans `loop/prompts.ts`).
 - Chaque étape (raisonnement, délégation, appel d'outil, résultat) est renvoyée au serveur pour être affichée dans la timeline et stockée dans `agent_steps`. Elle porte son auteur (`agent`), et pour un spécialiste la délégation à laquelle elle appartient (`parentId`) ; appels et résultats sont reliés par `callId`.
 - Limiter le nombre d'itérations : `MAX_ORCHESTRATOR_ITERATIONS` tours de délégation, `MAX_AGENT_ITERATIONS` appels au modèle par spécialiste, puis réponse forcée sans outil.
+- **IA au choix de l'utilisateur** (`packages/shared/src/ai-providers.ts`) : `dashia` (Ollama de l'agent) ou un fournisseur externe avec la clé de l'utilisateur.
+  - La clé est vérifiée auprès du fournisseur, stockée chiffrée (`ai_credentials`), jamais renvoyée au navigateur (seulement ses 4 derniers caractères).
+  - L'agent la lit au début d'une réponse de chat via `GET /api/agent/llm`, réservé aux tokens de tâche de conversation ; elle n'est **jamais** dans le payload d'une tâche (pg-boss la stockerait en clair) ni dans les logs.
+  - Seule la conversation passe par le fournisseur : analyse, OCR, recherche et embeddings restent sur `dashia`.
+  - Adaptateurs dans `agent/src/llm` : SDK officiel Anthropic pour Claude, API compatible OpenAI pour les autres, derrière l'interface `ChatBackend` (même boucle multi-agents).
 
 ## PWA
 

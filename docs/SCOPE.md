@@ -10,6 +10,7 @@
 | 2. Sécurité | ✅ Livrée : passkeys (connexion Face ID / empreinte), verrouillage de l'app, validation forte des actions sensibles |
 | 3. Maison | ✅ Code livré et testé contre un faux serveur Hue ; **à valider sur le pont réel** (nécessite une app développeur Philips, voir README) |
 | 4. Routines & NFC | ✅ Livrée : routines (heure, tag, manuel, agent), tags NFC (écriture Android, URL iPhone), écran au tap |
+| 6. Service ouvert | ✅ Livrée : IA au choix par utilisateur (DashIA, ou sa clé Claude / ChatGPT / Mistral / Gemini), application Philips Hue propre à chaque utilisateur |
 | 5. Multi-agents | ✅ Livrée : orchestrateur + spécialistes Documents / Planning / Maison, délégations parallèles ou enchaînées, outils cloisonnés par spécialiste, timeline par agent |
 
 Ajouts issus de la maquette DashIA : formats images (vision) et Excel, catégories du drive, aperçu des documents, stats CPU/RAM/VRAM de l'agent, choix du modèle de chat (admin), test de connexion, export des données.

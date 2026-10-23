@@ -1,6 +1,8 @@
 import {
   EMBEDDING_DIMENSIONS,
   type ActionTrigger,
+  type AiProvider,
+  type ExternalAiProvider,
   type AgentStep,
   type FileCategory,
   type ReminderStatus,
@@ -276,8 +278,35 @@ export const userSettings = pgTable('user_settings', {
   unlockPinLockedUntil: timestamp('unlock_pin_locked_until', { withTimezone: true }),
   /** Ranger automatiquement chaque document analysé dans le dossier de sa catégorie. */
   autoFileDocuments: boolean('auto_file_documents').notNull().default(false),
+  /** IA de la conversation : `dashia` (modèle du service) ou un fournisseur dont l'utilisateur a enregistré la clé. */
+  aiProvider: text('ai_provider').$type<AiProvider>().notNull().default('dashia'),
   ...timestamps,
 });
+
+/** Clés d'API des fournisseurs d'IA de l'utilisateur, chiffrées (AES-256-GCM), avec le modèle choisi. */
+export const aiCredentials = pgTable('ai_credentials', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: userId(),
+  provider: text('provider').$type<ExternalAiProvider>().notNull(),
+  apiKeyEnc: text('api_key_enc').notNull(),
+  /** Quatre derniers caractères, pour reconnaître la clé sans l'exposer. */
+  keyHint: text('key_hint').notNull(),
+  model: text('model').notNull(),
+  ...timestamps,
+}, (table) => [uniqueIndex('ai_credentials_user_provider_idx').on(table.userId, table.provider)]);
+
+/**
+ * Application OAuth propre à l'utilisateur pour un connecteur (ex. son app développeur Philips Hue),
+ * utilisée à la place de celle du serveur : n'importe qui peut brancher sa maison sans configuration côté service.
+ */
+export const connectorApps = pgTable('connector_apps', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: userId(),
+  provider: text('provider').$type<ConnectorProvider>().notNull(),
+  clientId: text('client_id').notNull(),
+  clientSecretEnc: text('client_secret_enc').notNull(),
+  ...timestamps,
+}, (table) => [uniqueIndex('connector_apps_user_provider_idx').on(table.userId, table.provider)]);
 
 export const routines = pgTable('routines', {
   id: uuid('id').primaryKey().defaultRandom(),

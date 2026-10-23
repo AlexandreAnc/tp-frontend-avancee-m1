@@ -4,6 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import {
   AGENT_API_PREFIX,
   agendaResponseSchema,
+  chatLlmConfigSchema,
   homeStateSchema,
   createActionResponseSchema,
   exactSearchResponseSchema,
@@ -65,6 +66,11 @@ export class ApiClient {
     const parsed = schema.safeParse(await response.json());
     if (!parsed.success) throw new TaskError(`Réponse inattendue de ${path}`, false);
     return parsed.data;
+  }
+
+  /** IA de conversation choisie par l'utilisateur (clé incluse) : réponses du chat uniquement. */
+  getChatLlmConfig() {
+    return this.json(chatLlmConfigSchema, '/llm');
   }
 
   listFiles() {
