@@ -13,9 +13,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-env:
-  IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/dashia
-
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -51,6 +48,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      # GHCR exige un nom d'image en minuscules (le propriétaire du dépôt peut en contenir).
+      - name: Nom des images
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/dashia" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -86,6 +86,9 @@ jobs:
       contents: read
       packages: read
     steps:
+      # GHCR exige un nom d'image en minuscules (le propriétaire du dépôt peut en contenir).
+      - name: Nom des images
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/dashia" >> "$GITHUB_ENV"
       - name: Clé SSH du VPS
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
