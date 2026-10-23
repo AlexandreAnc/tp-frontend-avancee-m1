@@ -12,3 +12,5 @@ coverage/
 !.env.example
 !.env.prod.example
 .DS_Store
+playwright-report/
+test-results/

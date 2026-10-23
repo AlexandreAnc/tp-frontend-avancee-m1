@@ -12,10 +12,12 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "5.0.5",
     "eslint": "^10.13.0",
     "eslint-plugin-vue": "^10.11.1",
     "typescript": "~5.9.3",
