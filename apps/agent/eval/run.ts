@@ -13,11 +13,12 @@ import { generateScenarios, INTENT_NAMES } from './scenarios';
 
 const MODEL = process.env.EVAL_MODEL ?? 'qwen3:4b';
 const CHAT_CONTEXT = process.env.CHAT_CONTEXT ? Number(process.env.CHAT_CONTEXT) : undefined;
+const CHAT_MAX_TOKENS = process.env.CHAT_MAX_TOKENS ? Number(process.env.CHAT_MAX_TOKENS) : undefined;
 const CHAT_THINKING = process.env.CHAT_THINKING !== 'false';
 const SET = process.env.EVAL_SET ?? 'fixed';
 /** Graine de l'examen : différente de celles de l'entraînement (`finetune/generate.ts`). */
 export const TEST_SEED = 4242;
-const config: ModelConfig = { OLLAMA_URL: process.env.OLLAMA_URL ?? 'http://localhost:11434', CHAT_MODEL: MODEL, EMBED_MODEL: 'bge-m3', CHAT_CONTEXT };
+const config: ModelConfig = { OLLAMA_URL: process.env.OLLAMA_URL ?? 'http://localhost:11434', CHAT_MODEL: MODEL, EMBED_MODEL: 'bge-m3', CHAT_CONTEXT, CHAT_MAX_TOKENS };
 
 const NOW = new Date('2026-11-16T10:00:00+01:00');
 const INVOICE = '849fea72-3abd-4321-9ff7-00a5d3ee67cf';

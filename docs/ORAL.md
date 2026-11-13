@@ -76,8 +76,11 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 2. **Mesurer d'abord** : un examen de 42 scénarios jamais vus, 21 types de demandes du panel, avec des contrôles automatiques.
 3. **Distillation** : un grand modèle professeur joue des centaines de scénarios ; seules ses réussites deviennent des exemples. Aucune donnée utilisateur.
 4. **LoRA sur le Mac** (MLX), import dans Ollama, et l'agent change de modèle sans une ligne de code.
-5. **Résultat avant/après** : le tableau de `docs/FINETUNING.md`, partie 6.
-6. **Ce qu'on a rattrapé** : des exemples « venus du futur » qui auraient faussé tout l'entraînement, et un test trop strict.
+5. **Résultat avant/après** (`docs/FINETUNING.md`, partie 6) : **64 % → 88 %** à l'examen, actions sur une pièce **0/8 → 8/8**, **3,4 s** par demande contre 74 s pour le modèle qui réfléchit. Montrer aussi ce qui reste faux : les dates relatives (« demain »), et l'écart de ± 2 scénarios entre deux passages.
+6. **Ce qu'on a rattrapé** :
+   - des exemples « venus du futur » qui auraient faussé tout l'entraînement ;
+   - **le modèle était bon, son emballage non** : importé dans Ollama, il produisait des appels d'outils illisibles, parce qu'Ollama lui présentait les outils dans un autre format que celui de l'entraînement ;
+   - un petit modèle peut boucler sans fin : l'examen l'a révélé, une limite de longueur (`CHAT_MAX_TOKENS`) le transforme en erreur immédiate.
 
 #### Conclusion de la posture critique (30 s)
 
@@ -117,7 +120,7 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 - [ ] Fusionner les PR #1, #2, #3 et vérifier la prod.
 - [x] CSR/SSR/SSG mesurés (`docs/RENDU.md`).
 - [x] CSP globale et CSRF (`e2e/security.spec.ts`).
-- [ ] Remplir le tableau de résultats de `docs/FINETUNING.md`.
+- [x] Remplir le tableau de résultats de `docs/FINETUNING.md`.
 - [ ] Enregistrer une vidéo de la démo en secours (Wi-Fi, agent hors ligne).
 - [ ] Créer le support de présentation à partir de ce plan.
 - [ ] Faire une répétition chronométrée.
