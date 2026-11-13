@@ -311,6 +311,41 @@ const INTENTS: Intent[] = [
     },
   },
   {
+    name: 'Allumer une pièce',
+    phrasings: ['Allume la pièce {room}.', 'Tu peux allumer la lumière de la pièce {room} ?', 'Lumière dans la pièce {room}, s’il te plaît.', 'Allume-moi la pièce {room}.', 'J’aimerais de la lumière dans la pièce {room}.', 'Allume les lampes de la pièce {room}.', 'Il fait sombre dans la pièce {room}, allume.', 'Tu allumes la pièce {room} ?'],
+    build: ({ account }, random, phrasing) => {
+      const dark = account.home.rooms.filter((room) => !room.on);
+      const room = random.pick(dark.length ? dark : account.home.rooms);
+      return {
+        question: fill(phrasing, { room: room.name }),
+        check: (run) => {
+          const actions = hueActions(run);
+          return [
+            ...delegated(run, 'home'),
+            ...must(actions.some((action) => action.roomId === room.id && (action.on === true || (action.brightness !== undefined && action.on !== false))), `${room.name} non allumée`),
+            ...must(!actions.some((action) => action.roomId !== room.id), 'autre pièce modifiée'),
+          ];
+        },
+      };
+    },
+  },
+  {
+    name: 'État de la maison',
+    phrasings: ['Qu’est-ce qui est allumé à la maison ?', 'Quelles pièces sont allumées ?', 'Il y a des lumières allumées ?', 'Fais-moi l’état des lumières.', 'Où est-ce que la lumière est allumée ?', 'Tout est éteint à la maison ?', 'État de la maison, s’il te plaît.', 'J’ai laissé des lampes allumées ?'],
+    build: ({ account }, _random, phrasing) => {
+      const lit = account.home.rooms.filter((room) => room.on);
+      return {
+        question: phrasing,
+        check: (run) => [
+          ...delegated(run, 'home'),
+          ...must(run.calls.includes('getHome'), 'état de la maison non consulté'),
+          ...lit.flatMap((room) => answerHas(run, new RegExp(room.name, 'i'), `la pièce allumée ${room.name}`)),
+          ...noAction(run),
+        ],
+      };
+    },
+  },
+  {
     name: 'Régler la luminosité',
     phrasings: ['Mets la pièce {room} à {level} %.', 'Règle la luminosité de la pièce {room} sur {level} %.', 'Baisse la pièce {room} à {level} %.', 'Lumière de la pièce {room} à {level} % s’il te plaît.', 'Tu peux passer la pièce {room} à {level} % ?', 'Luminosité {level} % dans la pièce {room}.', 'Ajuste la pièce {room} à {level} pour cent.', 'Je voudrais la pièce {room} à {level} %.'],
     build: ({ account }, random, phrasing) => {

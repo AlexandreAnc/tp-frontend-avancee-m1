@@ -32,7 +32,7 @@ Consigne du TP (M1, développement front-end avancé) et état du projet DashIA 
 - Analyse du projet, test de performance et d'accessibilité.
 - Prestation orale.
 
-Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`IA-POSTURE.md`](IA-POSTURE.md)).
+Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`IA-POSTURE.md`](IA-POSTURE.md) et [`FINETUNING.md`](FINETUNING.md)). Plan de l'oral : [`ORAL.md`](ORAL.md).
 
 ## État du projet
 

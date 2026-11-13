@@ -9,7 +9,7 @@
 import type { AgendaItem } from '@app/shared';
 import { checkModels } from '../src/llm/ollama';
 import { delegatedTo, runScenario, type FakeAccount, type ModelConfig, type Scenario } from './harness';
-import { generateScenarios } from './scenarios';
+import { generateScenarios, INTENT_NAMES } from './scenarios';
 
 const MODEL = process.env.EVAL_MODEL ?? 'qwen3:4b';
 const CHAT_CONTEXT = process.env.CHAT_CONTEXT ? Number(process.env.CHAT_CONTEXT) : undefined;
@@ -80,7 +80,7 @@ const FIXED: Scenario[] = [
 ];
 
 async function main() {
-  const scenarios = SET === 'test' ? generateScenarios(TEST_SEED, Number(process.env.EVAL_COUNT ?? 38), 'test') : FIXED;
+  const scenarios = SET === 'test' ? generateScenarios(TEST_SEED, Number(process.env.EVAL_COUNT ?? INTENT_NAMES.length * 2), 'test') : FIXED;
   const capabilities = await checkModels({ ...config, CHAT_THINKING });
   console.info(`Modèle : ${MODEL} · ${scenarios.length} scénarios (${SET}) · raisonnement : ${capabilities.supportsThinking ? 'oui' : 'non'} · contexte : ${CHAT_CONTEXT ?? 'défaut Ollama'}\n`);
   const byIntent = new Map<string, { passed: number; total: number }>();
