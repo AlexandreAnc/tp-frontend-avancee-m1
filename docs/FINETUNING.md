@@ -84,7 +84,7 @@ Le script entraîne, fusionne les poids, puis importe le résultat dans Ollama s
 | Modèle | Examen (42 scénarios jamais vus) | Temps par demande | Mémoire |
 |---|---|---|---|
 | `qwen3:4b-instruct` (base) | 27/42 (64 %) ; 0/8 sur les actions d'une pièce | 7,9 s | ~4 Go |
-| `qwen3:4b` (Thinking, prod actuelle) | | | ~4 Go |
+| `qwen3:4b` (Thinking, prod actuelle) | 17/18 (94 %), sur les 18 premiers scénarios : mesure arrêtée faute de temps | 74 s | ~4 Go |
 | **`dashia-qwen3`** (fine-tuné) | | | ~4 Go |
 | `gemma4:26b` (professeur) | | | ~18 Go |
 
