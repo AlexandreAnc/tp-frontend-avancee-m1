@@ -104,6 +104,12 @@ Examen (`EVAL_SET=test`) : 42 scénarios jamais vus, 2 par type de demande, cont
 | Boucle | « Éteins tout » : le modèle répète ses appels | `CHAT_MAX_TOKENS` coupe en 25 s au lieu de 5 min ; plus d'exemples « tout éteindre » |
 | Scène confondue | « Mode Lecture » → luminosité à 23 % | Plus d'exemples de scènes |
 
+**Deuxième itération : plus de données, moins bien.** On a fait jouer au professeur 140 scénarios de plus, uniquement sur les 7 types de demande en échec (`ONLY=…`, graine 2), soit 1 759 exemples au lieu de 1 265, puis réentraîné (`dashia-qwen3-v2`). Résultat à l'examen : **34/42 puis 28/42**, contre 37/42 pour la première version. Le nouveau modèle envoie des demandes de planning (« rappel demain », « mon agenda ») au spécialiste Documents, une erreur que la première version ne faisait jamais.
+
+- **Les données ne l'expliquent pas** : vérifié exemple par exemple, le professeur délègue toujours ces demandes à Planning, et les délégations à Planning sont même plus nombreuses (97 contre 59).
+- **La perte de validation ne permettait pas de choisir un meilleur point d'arrêt** : mesurée sur 50 exemples tirés au hasard, elle oscille entre 0,13 et 0,29 à partir de l'itération 700. Choisir le point d'arrêt sur l'examen reviendrait à apprendre l'examen.
+- **Décision** : la production reste sur la première version. Sans l'examen, on aurait déployé un modèle « entraîné sur plus de données » et donc présumé meilleur, alors qu'il l'est moins. Pistes pour une vraie seconde itération : une perte de validation sur tout le jeu (pas un échantillon), plusieurs entraînements avec des graines différentes pour séparer l'effet des données du hasard, et un taux d'apprentissage plus bas pour un réentraînement à partir de la première version plutôt que de zéro.
+
 **Garde-fou ajouté grâce à l'examen** : un petit modèle peut boucler et générer sans fin (3 scénarios bloqués 5 minutes au premier passage). `CHAT_MAX_TOKENS` limite la longueur d'une réponse : le modèle qui boucle échoue en quelques secondes au lieu de bloquer l'agent (`test/ollama-client.test.ts`).
 
 ## 7. Ce que la démarche nous a appris (posture critique)

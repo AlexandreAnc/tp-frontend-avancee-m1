@@ -76,7 +76,7 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 2. **Mesurer d'abord** : un examen de 42 scénarios jamais vus, 21 types de demandes du panel, avec des contrôles automatiques.
 3. **Distillation** : un grand modèle professeur joue des centaines de scénarios ; seules ses réussites deviennent des exemples. Aucune donnée utilisateur.
 4. **LoRA sur le Mac** (MLX), import dans Ollama, et l'agent change de modèle sans une ligne de code.
-5. **Résultat avant/après** (`docs/FINETUNING.md`, partie 6) : **64 % → 88 %** à l'examen, actions sur une pièce **0/8 → 8/8**, **3,4 s** par demande contre 74 s pour le modèle qui réfléchit. Montrer aussi ce qui reste faux : les dates relatives (« demain »), et l'écart de ± 2 scénarios entre deux passages.
+5. **Résultat avant/après** (`docs/FINETUNING.md`, partie 6) : **64 % → 88 %** à l'examen, actions sur une pièce **0/8 → 8/8**, **3,4 s** par demande contre 74 s pour le modèle qui réfléchit. Montrer aussi ce qui reste faux : les dates relatives (« demain »), et l'écart de ± 2 scénarios entre deux passages. **Puis la deuxième itération** : 40 % de données en plus, ciblées sur les échecs, et un modèle **moins bon** (34 puis 28/42). L'examen l'a bloqué avant la production : c'est l'argument le plus fort pour « mesurer avant de croire ».
 6. **Ce qu'on a rattrapé** :
    - des exemples « venus du futur » qui auraient faussé tout l'entraînement ;
    - **le modèle était bon, son emballage non** : importé dans Ollama, il produisait des appels d'outils illisibles, parce qu'Ollama lui présentait les outils dans un autre format que celui de l'entraînement ;
