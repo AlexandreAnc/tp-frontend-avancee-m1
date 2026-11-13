@@ -44,7 +44,7 @@ Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`I
 | Accessibilité, Lighthouse | ✅ Site public : 100 en accessibilité ; axe-core WCAG 2.2 AA en CI (clair et sombre) | `README.md` (Site public), `apps/web/e2e/marketing.spec.ts`, `/accessibilite` |
 | API avec le back-end du framework | ✅ Routes Nitro (`server/api`), services, validation Zod | `apps/web/server` |
 | PWA (hors ligne, push) | ✅ Service worker, historique hors ligne, push VAPID avec boutons Valider / Refuser, installable | `apps/web/service-worker/sw.ts` |
-| **Même page en CSR, SSR et SSG + comparaison des Web Vitals** | ❌ **À faire.** Le site public est en SSG, l'app en CSR, mais pas encore une même page dans les trois modes avec une mesure comparée | — |
+| Même page en CSR, SSR et SSG + comparaison des Web Vitals | ✅ Le même article sur `/rendu/csr`, `/rendu/ssr` et `/rendu/ssg`, avec les mêmes données et la même API. CSR : LCP 5,4 s ; SSR et SSG : 1,8 s ; sous charge, SSG 31 fois plus rapide que SSR | `docs/RENDU.md`, `scripts/compare-rendering.mjs`, `e2e/rendering.spec.ts` |
 | Lighthouse selon WCAG 2.2 | ✅ 100 / 100 / 100 / 100 sur mobile et ordinateur (site public) | `README.md` |
 | Tests unitaires, fonctionnels, E2E | ✅ Vitest (unitaires et intégration avec PostgreSQL), Playwright (E2E, accessibilité, SEO), seuils de couverture, évaluation de l'agent avec le vrai modèle | `apps/*/test`, `apps/web/e2e`, `apps/agent/eval` |
 | **Content Security Policy** | ⚠️ **Partiel.** CSP `sandbox` seulement sur les fichiers servis aux utilisateurs ; pas de CSP sur l'app et le site | `server/api/files/[id]/content.get.ts` |
@@ -55,6 +55,5 @@ Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`I
 
 ## Reste à faire pour coller à la consigne
 
-1. **CSR / SSR / SSG** : une même page publique (par exemple un article) servie dans les trois modes (`routeRules` de Nuxt), avec un tableau comparatif FCP, LCP, TTFB, CLS et TBT mesuré par Lighthouse.
-2. **CSP globale** : en-tête `Content-Security-Policy` sur l'app et le site (scripts, styles, connexions WebSocket, images), testé en E2E.
-3. **CSRF** : contrôle de l'en-tête `Origin` sur toutes les requêtes non `GET` de l'API, avec un test qui prouve qu'une requête venant d'un autre site est refusée.
+1. **CSP globale** : en-tête `Content-Security-Policy` sur l'app et le site (scripts, styles, connexions WebSocket, images), testé en E2E.
+2. **CSRF** : contrôle de l'en-tête `Origin` sur toutes les requêtes non `GET` de l'API, avec un test qui prouve qu'une requête venant d'un autre site est refusée.
