@@ -94,7 +94,7 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 | Stratégies de rendu (thème 2) | Démo live `/rendu/csr`, `/rendu/ssr`, `/rendu/ssg` : CSR 3 fois plus lent à afficher (LCP 5,4 s contre 1,8 s), SSG 31 fois plus rapide que SSR sous charge. **Posture critique** : la simulation de Lighthouse gommait l'écart, il a fallu une mesure réelle | `docs/RENDU.md` |
 | Performance, SEO, accessibilité (thème 4) | Lighthouse 100 / 100 / 100 / 100 sur mobile, axe WCAG 2.2 AA en CI, déclaration d'accessibilité, JSON-LD, `llms.txt` | `/`, `/blog`, `/accessibilite` |
 | PWA (thème 6) | Installable, historique hors ligne, push avec boutons Valider / Refuser, **Face ID / empreinte** (passkeys), tags NFC pour les routines | `service-worker/sw.ts` |
-| Sécurité (thème 3) | Secrets chiffrés (AES-GCM), XSS (Markdown sans HTML), CSP et CSRF | *CSP globale et CSRF à compléter* |
+| Sécurité (thème 3) | **Démo** : injecter un script dans la page depuis la console → bloqué par la CSP (empreintes SHA-256, pas de `unsafe-inline`). Requête depuis un autre site → 403 (CSRF). Secrets chiffrés (AES-GCM), Markdown rendu sans HTML | `server/utils/csp.ts`, `server/middleware/csrf.ts`, `e2e/security.spec.ts` |
 | Tests (thème 3) | Unitaires, intégration avec PostgreSQL, E2E Playwright, évaluation de l'agent | `apps/*/test`, `e2e/`, `eval/` |
 | Production (thème 7) | GitHub Actions → images GHCR → déploiement SSH Docker → smoke test ; Caddy derrière Cloudflare | `.github/workflows/ci-cd.yml` |
 
@@ -116,7 +116,7 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 
 - [ ] Fusionner les PR #1, #2, #3 et vérifier la prod.
 - [x] CSR/SSR/SSG mesurés (`docs/RENDU.md`).
-- [ ] Combler les manques de `docs/TP.md` : CSP globale, CSRF.
+- [x] CSP globale et CSRF (`e2e/security.spec.ts`).
 - [ ] Remplir le tableau de résultats de `docs/FINETUNING.md`.
 - [ ] Enregistrer une vidéo de la démo en secours (Wi-Fi, agent hors ligne).
 - [ ] Créer le support de présentation à partir de ce plan.

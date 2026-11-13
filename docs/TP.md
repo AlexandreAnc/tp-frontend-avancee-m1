@@ -47,13 +47,12 @@ Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`I
 | Même page en CSR, SSR et SSG + comparaison des Web Vitals | ✅ Le même article sur `/rendu/csr`, `/rendu/ssr` et `/rendu/ssg`, avec les mêmes données et la même API. CSR : LCP 5,4 s ; SSR et SSG : 1,8 s ; sous charge, SSG 31 fois plus rapide que SSR | `docs/RENDU.md`, `scripts/compare-rendering.mjs`, `e2e/rendering.spec.ts` |
 | Lighthouse selon WCAG 2.2 | ✅ 100 / 100 / 100 / 100 sur mobile et ordinateur (site public) | `README.md` |
 | Tests unitaires, fonctionnels, E2E | ✅ Vitest (unitaires et intégration avec PostgreSQL), Playwright (E2E, accessibilité, SEO), seuils de couverture, évaluation de l'agent avec le vrai modèle | `apps/*/test`, `apps/web/e2e`, `apps/agent/eval` |
-| **Content Security Policy** | ⚠️ **Partiel.** CSP `sandbox` seulement sur les fichiers servis aux utilisateurs ; pas de CSP sur l'app et le site | `server/api/files/[id]/content.get.ts` |
+| Content Security Policy | ✅ CSP stricte sur chaque page (rendue, SPA ou pré-rendue) : scripts du site et scripts en ligne autorisés **un par un par empreinte SHA-256**, jamais `unsafe-inline` ; `frame-ancestors`, `nosniff` et `X-Frame-Options` en en-tête. Testé : un script injecté est bloqué, aucun script légitime ne l'est (y compris dans tout le parcours de l'app) | `server/utils/csp.ts`, `server/plugins/csp.ts`, `e2e/security.spec.ts` |
 | Gestion des secrets | ✅ Variables d'environnement validées (Zod), secrets générés au déploiement, clés et tokens chiffrés en base (AES-GCM), secrets GitHub en CI, rien dans le dépôt | `deploy/init-env.sh`, `server/utils/crypto.ts` |
 | Protection XSS | ✅ Rendu Markdown sans HTML (testé), textes Vue échappés, fichiers texte servis en `sandbox`, JSON-LD échappé | `utils/format.ts`, `test/unit/format.test.ts` |
-| **Protection CSRF** | ⚠️ **Partiel.** `state` anti-CSRF sur OAuth, cookies de session Better Auth en `SameSite=Lax`, vérification d'origine par Better Auth sur ses routes ; pas de contrôle d'origine explicite sur les autres routes de l'API | `server/utils/oauth-state.ts` |
+| Protection CSRF | ✅ Cookies de session `SameSite=Lax`, `state` anti-CSRF sur OAuth, et contrôle d'origine (`Origin`, ou `Sec-Fetch-Site`) sur toute requête qui modifie des données. Testé : une modification venue d'un autre site reçoit une 403 | `server/middleware/csrf.ts`, `server/utils/csrf.ts`, `test/unit/web-security.test.ts`, `e2e/security.spec.ts` |
 | Mise en production Docker | ✅ Images construites en CI (GHCR), `docker-compose.prod.yml` (PostgreSQL, app, migrations, Caddy), déploiement SSH, smoke test | `README.md` (Production), `.github/workflows/ci-cd.yml` |
 
 ## Reste à faire pour coller à la consigne
 
-1. **CSP globale** : en-tête `Content-Security-Policy` sur l'app et le site (scripts, styles, connexions WebSocket, images), testé en E2E.
-2. **CSRF** : contrôle de l'en-tête `Origin` sur toutes les requêtes non `GET` de l'API, avec un test qui prouve qu'une requête venant d'un autre site est refusée.
+Toutes les exigences sont couvertes. Avant l'oral : fusionner les PR, vérifier la prod, et finir le fine-tuning (`docs/FINETUNING.md`).
