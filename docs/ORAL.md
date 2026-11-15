@@ -91,7 +91,7 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 | Exigence | Ce qu'on montre | Preuve |
 |---|---|---|
 | Maquette Figma → interface fidèle et accessible | Tokens Figma dans le `@theme` Tailwind, migration vérifiée au pixel près | `assets/css/main.css` |
-| Stratégies de rendu (thème 2) | Même page en CSR, SSR et SSG, avec Web Vitals comparés | *à faire, voir `docs/TP.md`* |
+| Stratégies de rendu (thème 2) | Démo live `/rendu/csr`, `/rendu/ssr`, `/rendu/ssg` : CSR 3 fois plus lent à afficher (LCP 5,4 s contre 1,8 s), SSG 31 fois plus rapide que SSR sous charge. **Posture critique** : la simulation de Lighthouse gommait l'écart, il a fallu une mesure réelle | `docs/RENDU.md` |
 | Performance, SEO, accessibilité (thème 4) | Lighthouse 100 / 100 / 100 / 100 sur mobile, axe WCAG 2.2 AA en CI, déclaration d'accessibilité, JSON-LD, `llms.txt` | `/`, `/blog`, `/accessibilite` |
 | PWA (thème 6) | Installable, historique hors ligne, push avec boutons Valider / Refuser, **Face ID / empreinte** (passkeys), tags NFC pour les routines | `service-worker/sw.ts` |
 | Sécurité (thème 3) | Secrets chiffrés (AES-GCM), XSS (Markdown sans HTML), CSP et CSRF | *CSP globale et CSRF à compléter* |
@@ -115,7 +115,8 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 ## Avant le jour J
 
 - [ ] Fusionner les PR #1, #2, #3 et vérifier la prod.
-- [ ] Combler les manques de `docs/TP.md` : CSR/SSR/SSG, CSP globale, CSRF.
+- [x] CSR/SSR/SSG mesurés (`docs/RENDU.md`).
+- [ ] Combler les manques de `docs/TP.md` : CSP globale, CSRF.
 - [ ] Remplir le tableau de résultats de `docs/FINETUNING.md`.
 - [ ] Enregistrer une vidéo de la démo en secours (Wi-Fi, agent hors ligne).
 - [ ] Créer le support de présentation à partir de ce plan.

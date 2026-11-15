@@ -15,7 +15,7 @@ export const SITE = {
 
 /** Pages du site public (pré-rendues, indexées) ; tout le reste est l'app, réservée aux comptes. */
 export function isMarketingPath(path: string): boolean {
-  return path === '/' || path === '/accessibilite' || path === '/blog' || path.startsWith('/blog/');
+  return path === '/' || path === '/accessibilite' || path === '/blog' || path.startsWith('/blog/') || path.startsWith('/rendu/');
 }
 
 export function absoluteUrl(path: string): string {
