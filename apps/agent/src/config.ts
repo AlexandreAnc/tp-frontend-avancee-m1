@@ -13,6 +13,12 @@ const configSchema = z.object({
    */
   CHAT_CONTEXT: z.coerce.number().int().min(2048).max(131_072).optional(),
   /** `false` : pas de phase de raisonnement, même si le modèle sait raisonner (réponses plus rapides, moins réfléchies). */
+  /**
+   * Longueur maximale d'une réponse du modèle de chat, en tokens (`num_predict` d'Ollama). Un petit modèle peut boucler
+   * et générer sans fin : la limite transforme une attente de plusieurs minutes en erreur immédiate. Sans valeur : pas
+   * de limite (à éviter avec un modèle qui raisonne, dont la réflexion compte dans ce total).
+   */
+  CHAT_MAX_TOKENS: z.coerce.number().int().min(256).max(32_768).optional(),
   CHAT_THINKING: z.enum(['true', 'false']).default('true').transform((value) => value === 'true'),
   EMBED_MODEL: z.string().min(1).default(DEFAULT_EMBED_MODEL),
   AGENT_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),

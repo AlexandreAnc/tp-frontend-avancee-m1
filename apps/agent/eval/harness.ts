@@ -53,6 +53,7 @@ export interface ModelConfig {
   CHAT_MODEL: string;
   EMBED_MODEL: string;
   CHAT_CONTEXT?: number;
+  CHAT_MAX_TOKENS?: number;
 }
 
 const embeddingCache = new Map<string, number[]>();

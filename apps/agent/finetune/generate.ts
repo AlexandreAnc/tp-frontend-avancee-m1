@@ -3,7 +3,11 @@
  * et seules les parties qui passent tous les contrôles deviennent des exemples (un par appel au modèle).
  *
  *   TEACHER=gemma4:26b COUNT=600 pnpm --filter agent finetune:generate
+ *   SEED=2 COUNT=140 ONLY="Planning de la semaine,Conversation simple" pnpm --filter agent finetune:generate
  *
+ * `ONLY` cible des types de demande (ceux que l'examen montre faibles), avec une autre graine (SEED) pour ne pas
+ * rejouer les mêmes comptes. Les données écrites rassemblent toutes les parties réussies du professeur, toutes graines
+ * confondues : chaque lot s'ajoute aux précédents.
  * Sortie : `$FINETUNE_DIR/data/{train,valid}.jsonl`, au format chat + outils de mlx-lm (`messages`, `tools`).
  * Reprise : chaque scénario joué est noté dans `$FINETUNE_DIR/runs.jsonl` dès qu'il se termine ; relancer la même
  * commande (même SEED, même COUNT) reprend là où on s'était arrêté.
@@ -20,6 +24,7 @@ const TEACHER = process.env.TEACHER ?? 'gemma4:26b';
 const COUNT = Number(process.env.COUNT ?? 600);
 const CONCURRENCY = Number(process.env.CONCURRENCY ?? 3);
 const SEED = Number(process.env.SEED ?? 1);
+const ONLY = process.env.ONLY?.split(',').map((name) => name.trim()).filter(Boolean);
 const ROOT = process.env.FINETUNE_DIR ?? join(homedir(), '.cache/dashia-finetune');
 const OUT = join(ROOT, 'data');
 const RUNS = join(ROOT, 'runs.jsonl');
@@ -53,18 +58,20 @@ type Example = NonNullable<ReturnType<typeof toExample>>;
 interface RunRecord { key: string; intent: string; failures: string[]; examples: Example[] }
 
 async function main() {
-  const scenarios = generateScenarios(SEED, COUNT, 'train');
+  const scenarios = generateScenarios(SEED, COUNT, 'train', ONLY);
   const capabilities = await checkModels(config);
   mkdirSync(ROOT, { recursive: true });
   const records: RunRecord[] = existsSync(RUNS)
     ? readFileSync(RUNS, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line) as RunRecord)
     : [];
   const done = new Set(records.map((record) => record.key));
-  const keyOf = (index: number) => `${TEACHER}:${SEED}:${index}`;
+  const keyOf = (index: number) => `${TEACHER}:${SEED}:${ONLY ? `${ONLY.join('+')}:` : ''}${index}`;
   const queue = scenarios.map((scenario, index) => ({ scenario, key: keyOf(index) })).filter(({ key }) => !done.has(key));
   console.info(`Professeur : ${TEACHER} · ${scenarios.length} scénarios d'entraînement (${scenarios.length - queue.length} déjà joués) · ${CONCURRENCY} en parallèle`);
 
   const started = Date.now();
+  const alreadyRecorded = records.length;
+  const total = queue.length;
   async function worker() {
     for (let item = queue.shift(); item; item = queue.shift()) {
       const exchanges: LlmExchange[] = [];
@@ -72,15 +79,16 @@ async function main() {
       const record: RunRecord = { key: item.key, intent: item.scenario.name, failures, examples: failures.length ? [] : exchanges.map(toExample).filter((example) => example !== null) };
       records.push(record);
       appendFileSync(RUNS, `${JSON.stringify(record)}\n`);
-      if (records.length % 20 === 0 || queue.length === 0) {
+      const played = records.length - alreadyRecorded;
+      if (played % 20 === 0 || queue.length === 0) {
         const minutes = (Date.now() - started) / 60_000;
-        console.info(`  ${records.length}/${scenarios.length} joués · ${records.filter((entry) => !entry.failures.length).length} gardés · ${minutes.toFixed(1)} min`);
+        console.info(`  ${played}/${total} joués · ${minutes.toFixed(1)} min`);
       }
     }
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
-  const mine = records.filter((record) => record.key.startsWith(`${TEACHER}:${SEED}:`));
+  const mine = records.filter((record) => record.key.startsWith(`${TEACHER}:`));
   const kept = mine.filter((record) => record.failures.length === 0);
   const rejected = new Map<string, number>();
   for (const record of mine.filter((entry) => entry.failures.length)) rejected.set(record.intent, (rejected.get(record.intent) ?? 0) + 1);

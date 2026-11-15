@@ -19,7 +19,17 @@ export default defineNuxtConfig({
   // le site public est pré-rendu en HTML pour les moteurs de recherche.
   ssr: true,
   routeRules: {
-    '/**': { ssr: false },
+    '/**': {
+      ssr: false,
+      // Sécurité : directives qui n'existent qu'en en-tête HTTP (la CSP des pages est posée en <meta>, voir server/plugins/csp.ts).
+      // `frame-ancestors 'self'` : aucun site tiers ne peut afficher DashIA dans un cadre (clickjacking) ; l'aperçu PDF interne reste possible.
+      headers: {
+        'content-security-policy': "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
+        'x-frame-options': 'SAMEORIGIN',
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'strict-origin-when-cross-origin',
+      },
+    },
     // Article inconnu : rendu serveur, donc une vraie 404 pour les moteurs (pas une SPA en 200).
     '/blog/**': { ssr: true },
     ...Object.fromEntries(MARKETING_ROUTES.map((route) => [route, { ssr: true, prerender: true, noScripts: true }])),

@@ -72,21 +72,45 @@ Sortie : `~/.cache/dashia-finetune/data/{train,valid}.jsonl` au format chat avec
 - Configuration : `apps/agent/finetune/lora.yaml`.
 
 ```bash
-ITERS=300 bash apps/agent/finetune/train.sh
+bash apps/agent/finetune/train.sh   # 1 265 itérations ≈ 2 passages sur les données, ~1 h sur un Mac M-series
 ```
 
-Le script entraîne, fusionne les poids, puis importe le résultat dans Ollama sous le nom `dashia-qwen3`, compressé en Q4_K_M, **avec le même gabarit de conversation** que le modèle d'origine. L'agent l'utilise ensuite sans changer une ligne de code : `CHAT_MODEL=dashia-qwen3`.
+Le script entraîne, fusionne les poids, puis importe le résultat dans Ollama sous le nom `dashia-qwen3`, compressé en 4 bits (`int4`), **avec le même format de conversation qu'à l'entraînement** (voir 7 : ce n'est pas automatique). L'agent l'utilise ensuite sans changer une ligne de code : `CHAT_MODEL=dashia-qwen3`.
 
 ## 6. Résultats
 
-*À compléter à la fin de l'entraînement.*
+Examen (`EVAL_SET=test`) : 42 scénarios jamais vus, 2 par type de demande, contexte de 8 192 tokens, mesuré le 13/11/2026 sur un MacBook Apple Silicon.
 
-| Modèle | Examen (42 scénarios jamais vus) | Temps par demande | Mémoire |
+| Modèle | Examen | Temps par demande | Mémoire |
 |---|---|---|---|
-| `qwen3:4b-instruct` (base) | 27/42 (64 %) ; 0/8 sur les actions d'une pièce | 7,9 s | ~4 Go |
-| `qwen3:4b` (Thinking, prod actuelle) | | | ~4 Go |
-| **`dashia-qwen3`** (fine-tuné) | | | ~4 Go |
-| `gemma4:26b` (professeur) | | | ~18 Go |
+| `qwen3:4b-instruct` (base) | 27/42 (64 %) ; **0/8** sur les actions d'une pièce | 7,9 s | ~4 Go |
+| `qwen3:4b` (Thinking, prod actuelle) | 17/18 (94 %), sur les 18 premiers scénarios : mesure arrêtée faute de temps | 74 s | ~4 Go |
+| **`dashia-qwen3`** (fine-tuné) | **37/42 (88 %)** ; **8/8** sur les actions d'une pièce | **3,4 s** (médiane), 4,1 s (moyenne) | 3,4 Go |
+| `gemma4:26b` (professeur) | 300/304 sur les scénarios d’entraînement (99 %) | ~14 s | ~18 Go |
+
+**En une phrase** : le modèle fine-tuné est aussi fiable que le modèle qui réfléchit (à quelques points près) et **près de 20 fois plus rapide**, et il n'annonce plus d'actions qu'il n'a pas faites.
+
+**L'entraînement** : 1 265 itérations, ~1 h sur le Mac. La perte de validation (mesurée sur 149 exemples jamais vus pendant l'entraînement) passe de 1,60 à 0,24 : le modèle prédit de mieux en mieux les réponses du professeur sans les avoir apprises par cœur.
+
+**Deux passages** de l'examen, à température 0,7 : 35/42 puis 37/42. L'écart entre deux passages (± 2 scénarios) rappelle qu'un score unique n'est pas une vérité : on compare des tendances, pas des décimales.
+
+**Ce qui reste faux** (les échecs se répètent d'un passage à l'autre, ce sont les cibles de la prochaine itération) :
+
+| Échec | Exemple | Piste |
+|---|---|---|
+| Dates relatives | « Demain 13 h » → rappel au 12 novembre | Plus d'exemples « demain », « dans 3 jours » ; ou un outil qui calcule la date |
+| Planning incomplet | La semaine liste 1 événement sur 3 | Exemples de listes complètes ; vérifier la longueur des réponses du professeur |
+| Délégation inutile | « Coucou » → état de la maison | Plus de conversations simples dans les données (peu d'exemples sans outil) |
+| Boucle | « Éteins tout » : le modèle répète ses appels | `CHAT_MAX_TOKENS` coupe en 25 s au lieu de 5 min ; plus d'exemples « tout éteindre » |
+| Scène confondue | « Mode Lecture » → luminosité à 23 % | Plus d'exemples de scènes |
+
+**Deuxième itération : plus de données, moins bien.** On a fait jouer au professeur 140 scénarios de plus, uniquement sur les 7 types de demande en échec (`ONLY=…`, graine 2), soit 1 759 exemples au lieu de 1 265, puis réentraîné (`dashia-qwen3-v2`). Résultat à l'examen : **34/42 puis 28/42**, contre 37/42 pour la première version. Le nouveau modèle envoie des demandes de planning (« rappel demain », « mon agenda ») au spécialiste Documents, une erreur que la première version ne faisait jamais.
+
+- **Les données ne l'expliquent pas** : vérifié exemple par exemple, le professeur délègue toujours ces demandes à Planning, et les délégations à Planning sont même plus nombreuses (97 contre 59).
+- **La perte de validation ne permettait pas de choisir un meilleur point d'arrêt** : mesurée sur 50 exemples tirés au hasard, elle oscille entre 0,13 et 0,29 à partir de l'itération 700. Choisir le point d'arrêt sur l'examen reviendrait à apprendre l'examen.
+- **Décision** : la production reste sur la première version. Sans l'examen, on aurait déployé un modèle « entraîné sur plus de données » et donc présumé meilleur, alors qu'il l'est moins. Pistes pour une vraie seconde itération : une perte de validation sur tout le jeu (pas un échantillon), plusieurs entraînements avec des graines différentes pour séparer l'effet des données du hasard, et un taux d'apprentissage plus bas pour un réentraînement à partir de la première version plutôt que de zéro.
+
+**Garde-fou ajouté grâce à l'examen** : un petit modèle peut boucler et générer sans fin (3 scénarios bloqués 5 minutes au premier passage). `CHAT_MAX_TOKENS` limite la longueur d'une réponse : le modèle qui boucle échoue en quelques secondes au lieu de bloquer l'agent (`test/ollama-client.test.ts`).
 
 ## 7. Ce que la démarche nous a appris (posture critique)
 
@@ -97,11 +121,12 @@ Erreurs rattrapées en construisant ce pipeline :
 - **Les scores ne suffisent pas, il faut relire.** Une réponse « réussie » citait `123e4567-e89b-12d3-a456-426655440000`, l'UUID d'exemple des documentations : une invention. Un contrôle refuse désormais tout identifiant qu'aucun outil n'a renvoyé.
 - **Un contrôle laxiste laisse passer le pire.** Couper la réflexion de `qwen3:4b` faisait apparaître son raisonnement en anglais dans la réponse, et les contrôles passaient quand même. Il y a désormais un contrôle de langue et de fuite de raisonnement.
 - **Vérifier ce qu'on entraîne.** Le nom `qwen3:4b` cachait une variante différente du modèle téléchargé au départ (voir 3).
+- **Le modèle était bon, son emballage non.** Une fois importé dans Ollama, le modèle fine-tuné produisait des appels d'outils illisibles (`failed to parse JSON`). Le même modèle, interrogé en brut avec le format de l'entraînement, répondait parfaitement : `<tool_call>{"name": "control_lights", "arguments": {"on": false, "roomId": "room-salon"}}</tool_call>`. Cause : en important les poids, Ollama ignore le gabarit fourni et choisit lui-même un « renderer » d'après l'architecture, ici celui de Qwen3-Coder, qui présente les outils en XML. Le modèle recevait un format qu'il n'avait jamais vu. On impose maintenant `RENDERER qwen3-vl-instruct`, qui reprend le format JSON d'origine. Leçon : **tester le modèle dans la chaîne réelle**, pas seulement à la sortie de l'entraînement.
 - **Une génération longue doit pouvoir reprendre.** 26 minutes de calcul ont été perdues à la première interruption : chaque scénario est maintenant sauvegardé dès qu'il se termine.
 
 **Limites connues :**
 
-- Le gabarit d'Ollama (Go) diffère légèrement de celui de Hugging Face utilisé à l'entraînement : espaces du JSON, saut de ligne avant `<tool_call>`, réponses d'outils parallèles non regroupées. L'examen, joué dans Ollama, mesure l'effet réel.
+- Le format de conversation d'Ollama peut différer légèrement de celui de Hugging Face utilisé à l'entraînement (espaces du JSON, réponses d'outils parallèles). L'examen, joué dans Ollama, mesure l'effet réel.
 - Les données sont synthétiques : le modèle apprend les demandes prévues. Les vraies conversations (avec accord et anonymisation, triées par un 👍/👎) seraient l'étape suivante.
 - Un modèle de 4 milliards de paramètres reste moins robuste qu'un grand modèle sur des demandes inédites ou ambiguës.
 - Le professeur fixe un plafond : l'élève apprend à l'imiter, pas à le dépasser.

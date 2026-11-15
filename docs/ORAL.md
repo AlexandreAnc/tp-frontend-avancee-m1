@@ -76,8 +76,11 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 2. **Mesurer d'abord** : un examen de 42 scénarios jamais vus, 21 types de demandes du panel, avec des contrôles automatiques.
 3. **Distillation** : un grand modèle professeur joue des centaines de scénarios ; seules ses réussites deviennent des exemples. Aucune donnée utilisateur.
 4. **LoRA sur le Mac** (MLX), import dans Ollama, et l'agent change de modèle sans une ligne de code.
-5. **Résultat avant/après** : le tableau de `docs/FINETUNING.md`, partie 6.
-6. **Ce qu'on a rattrapé** : des exemples « venus du futur » qui auraient faussé tout l'entraînement, et un test trop strict.
+5. **Résultat avant/après** (`docs/FINETUNING.md`, partie 6) : **64 % → 88 %** à l'examen, actions sur une pièce **0/8 → 8/8**, **3,4 s** par demande contre 74 s pour le modèle qui réfléchit. Montrer aussi ce qui reste faux : les dates relatives (« demain »), et l'écart de ± 2 scénarios entre deux passages. **Puis la deuxième itération** : 40 % de données en plus, ciblées sur les échecs, et un modèle **moins bon** (34 puis 28/42). L'examen l'a bloqué avant la production : c'est l'argument le plus fort pour « mesurer avant de croire ».
+6. **Ce qu'on a rattrapé** :
+   - des exemples « venus du futur » qui auraient faussé tout l'entraînement ;
+   - **le modèle était bon, son emballage non** : importé dans Ollama, il produisait des appels d'outils illisibles, parce qu'Ollama lui présentait les outils dans un autre format que celui de l'entraînement ;
+   - un petit modèle peut boucler sans fin : l'examen l'a révélé, une limite de longueur (`CHAT_MAX_TOKENS`) le transforme en erreur immédiate.
 
 #### Conclusion de la posture critique (30 s)
 
@@ -94,7 +97,7 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 | Stratégies de rendu (thème 2) | Démo live `/rendu/csr`, `/rendu/ssr`, `/rendu/ssg` : CSR 3 fois plus lent à afficher (LCP 5,4 s contre 1,8 s), SSG 31 fois plus rapide que SSR sous charge. **Posture critique** : la simulation de Lighthouse gommait l'écart, il a fallu une mesure réelle | `docs/RENDU.md` |
 | Performance, SEO, accessibilité (thème 4) | Lighthouse 100 / 100 / 100 / 100 sur mobile, axe WCAG 2.2 AA en CI, déclaration d'accessibilité, JSON-LD, `llms.txt` | `/`, `/blog`, `/accessibilite` |
 | PWA (thème 6) | Installable, historique hors ligne, push avec boutons Valider / Refuser, **Face ID / empreinte** (passkeys), tags NFC pour les routines | `service-worker/sw.ts` |
-| Sécurité (thème 3) | Secrets chiffrés (AES-GCM), XSS (Markdown sans HTML), CSP et CSRF | *CSP globale et CSRF à compléter* |
+| Sécurité (thème 3) | **Démo** : injecter un script dans la page depuis la console → bloqué par la CSP (empreintes SHA-256, pas de `unsafe-inline`). Requête depuis un autre site → 403 (CSRF). Secrets chiffrés (AES-GCM), Markdown rendu sans HTML | `server/utils/csp.ts`, `server/middleware/csrf.ts`, `e2e/security.spec.ts` |
 | Tests (thème 3) | Unitaires, intégration avec PostgreSQL, E2E Playwright, évaluation de l'agent | `apps/*/test`, `e2e/`, `eval/` |
 | Production (thème 7) | GitHub Actions → images GHCR → déploiement SSH Docker → smoke test ; Caddy derrière Cloudflare | `.github/workflows/ci-cd.yml` |
 
@@ -116,8 +119,8 @@ Raconter `docs/FINETUNING.md` comme une démarche scientifique :
 
 - [ ] Fusionner les PR #1, #2, #3 et vérifier la prod.
 - [x] CSR/SSR/SSG mesurés (`docs/RENDU.md`).
-- [ ] Combler les manques de `docs/TP.md` : CSP globale, CSRF.
-- [ ] Remplir le tableau de résultats de `docs/FINETUNING.md`.
+- [x] CSP globale et CSRF (`e2e/security.spec.ts`).
+- [x] Remplir le tableau de résultats de `docs/FINETUNING.md`.
 - [ ] Enregistrer une vidéo de la démo en secours (Wi-Fi, agent hors ligne).
 - [ ] Créer le support de présentation à partir de ce plan.
 - [ ] Faire une répétition chronométrée.
