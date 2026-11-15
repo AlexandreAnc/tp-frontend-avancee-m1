@@ -4,6 +4,12 @@ import { ARTICLES } from './shared/blog';
 /** Site public : pré-rendu en HTML au build (SEO, performance), le reste est l'app en SPA. */
 const MARKETING_ROUTES = ['/', '/blog', ...ARTICLES.map((article) => `/blog/${article.slug}`), '/accessibilite'];
 
+/**
+ * Démo du TP (phase 3) : le même article rendu en CSR, SSR et SSG, pour comparer les Web Vitals.
+ * Contrairement au site public, ces pages gardent leur JavaScript : sans lui, le CSR n'affiche rien et la comparaison serait faussée.
+ */
+const RENDERING_DEMO_ROUTES = ARTICLES.map((article) => `/rendu/ssg/${article.slug}`);
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
   devtools: { enabled: false },
@@ -13,10 +19,23 @@ export default defineNuxtConfig({
   // le site public est pré-rendu en HTML pour les moteurs de recherche.
   ssr: true,
   routeRules: {
-    '/**': { ssr: false },
+    '/**': {
+      ssr: false,
+      // Sécurité : directives qui n'existent qu'en en-tête HTTP (la CSP des pages est posée en <meta>, voir server/plugins/csp.ts).
+      // `frame-ancestors 'self'` : aucun site tiers ne peut afficher DashIA dans un cadre (clickjacking) ; l'aperçu PDF interne reste possible.
+      headers: {
+        'content-security-policy': "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
+        'x-frame-options': 'SAMEORIGIN',
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'strict-origin-when-cross-origin',
+      },
+    },
     // Article inconnu : rendu serveur, donc une vraie 404 pour les moteurs (pas une SPA en 200).
     '/blog/**': { ssr: true },
     ...Object.fromEntries(MARKETING_ROUTES.map((route) => [route, { ssr: true, prerender: true, noScripts: true }])),
+    '/rendu/csr/**': { ssr: false },
+    '/rendu/ssr/**': { ssr: true },
+    '/rendu/ssg/**': { ssr: true, prerender: true },
     // Icônes et image de partage : changent rarement, gardées un mois par le navigateur.
     '/icons/**': { headers: { 'cache-control': 'public, max-age=2592000, stale-while-revalidate=86400' } },
     '/og-image.png': { headers: { 'cache-control': 'public, max-age=2592000' } },
@@ -67,7 +86,7 @@ export default defineNuxtConfig({
     // Fichiers statiques (dont les pages pré-rendues) compressés au build : servis tels quels, sans coût CPU.
     compressPublicAssets: { gzip: true, brotli: true },
     prerender: {
-      routes: [...MARKETING_ROUTES, '/sitemap.xml', '/robots.txt', '/llms.txt'],
+      routes: [...MARKETING_ROUTES, ...RENDERING_DEMO_ROUTES, '/sitemap.xml', '/robots.txt', '/llms.txt'],
       // Seulement les routes listées : l'app (SPA) n'est jamais pré-rendue.
       crawlLinks: false,
       failOnError: true,

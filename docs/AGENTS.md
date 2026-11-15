@@ -118,6 +118,11 @@ export const ALLOWED_MIME_TYPES = [
   - Seule la conversation passe par le fournisseur : analyse, OCR, recherche et embeddings restent sur `dashia`.
   - Adaptateurs dans `agent/src/llm` : SDK officiel Anthropic pour Claude, API compatible OpenAI pour les autres, derrière l'interface `ChatBackend` (même boucle multi-agents).
 
+## En-têtes de sécurité
+
+- **CSP** : posée en `<meta>` sur chaque page par `server/plugins/csp.ts` ; les scripts en ligne sont autorisés par leur empreinte. N'ajoute jamais `unsafe-inline` ni `unsafe-eval` à `script-src`. Une nouvelle source externe (image, police, API appelée depuis le navigateur) doit être ajoutée dans `server/utils/csp.ts`, et `e2e/security.spec.ts` doit rester vert.
+- **CSRF** : toute route non `GET` de `/api` est protégée par `server/middleware/csrf.ts`. Une route appelée hors navigateur et authentifiée par token rejoint `EXEMPT_PREFIXES`, avec une justification.
+
 ## Site public (landing, blog)
 
 - Pages publiques : `definePageMeta({ layout: 'marketing', marketing: true })`, route ajoutée à `MARKETING_ROUTES` (`nuxt.config.ts`) et à `isMarketingPath` (`shared/site.ts`). Elles sont pré-rendues et servies **sans JavaScript** : toute interaction passe par des éléments natifs (`<details>`, liens, ancres), jamais par un `@click` ou un `onMounted`.

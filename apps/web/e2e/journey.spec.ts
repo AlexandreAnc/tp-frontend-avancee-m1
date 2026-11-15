@@ -10,6 +10,9 @@ const passwordInput = (page: Page) => page.locator('input[autocomplete$="-passwo
 const fileInList = (page: Page) => page.locator('strong', { hasText: 'facture-e2e.txt' });
 
 test('inscription, dépôt d’un document, déconnexion puis reconnexion', async ({ page }) => {
+  // L'app complète (connexion, drive, dépôt) doit fonctionner sous la Content Security Policy.
+  const cspViolations: string[] = [];
+  page.on('console', (message) => { if (/Content Security Policy/i.test(message.text())) cspViolations.push(message.text()); });
   const email = `e2e-${randomUUID()}@example.com`;
   const password = 'mot-de-passe-e2e-1234';
 
@@ -43,4 +46,5 @@ test('inscription, dépôt d’un document, déconnexion puis reconnexion', asyn
   await page.getByRole('button', { name: 'Se connecter', exact: true }).click();
   await expect(page).toHaveURL(/\/drive/);
   await expect(fileInList(page)).toBeVisible();
+  expect(cspViolations).toEqual([]);
 });

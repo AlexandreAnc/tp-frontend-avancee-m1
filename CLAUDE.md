@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-La base de connaissance du projet est dans `docs/` : lire `docs/AGENTS.md` (règles, non négociables) et `docs/README.md` avant toute modification.
+La base de connaissance du projet est dans `docs/` : lire `docs/AGENTS.md` (règles, non négociables) et `docs/README.md` avant toute modification. La consigne du TP et ce qu’il reste à couvrir sont dans `docs/TP.md`.
 `docs/IA-POSTURE.md` décrit comment l'IA est utilisée sur ce dépôt et ce qu'on attend de son code : relu, compris, testé.
 
 Skills du projet (`.claude/skills/`) :
