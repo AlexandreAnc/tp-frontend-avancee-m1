@@ -55,7 +55,7 @@ export async function runDigests(now = new Date()): Promise<number> {
       .returning();
     if (!claimed) continue;
 
-    await sendToUser(settings.userId, { title: 'Votre journée', body: await buildDigest(settings.userId, now), url: '/', tag: 'digest' });
+    await sendToUser(settings.userId, { title: 'Votre journée', body: await buildDigest(settings.userId, now), url: '/panel', tag: 'digest' });
     sent++;
   }
   return sent;

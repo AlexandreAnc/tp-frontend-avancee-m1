@@ -41,6 +41,41 @@ Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une ma
 - L'agent est **sans état** : on peut passer d'une machine à l'autre en lançant simplement l'agent ailleurs avec sa propre clé.
 - Si aucun agent n'est connecté, les tâches attendent dans la file et sont traitées à la reconnexion.
 
+## Site public (landing, blog) : SEO, GEO, performance, accessibilité
+
+L'app est une SPA (le panel est sur `/panel`). Le site public est **pré-rendu en HTML statique au build** et servi **sans JavaScript** (`routeRules` dans `nuxt.config.ts`) :
+
+- `/` : landing (fonctionnalités, équipe d'agents, sécurité, IA au choix, FAQ) ;
+- `/blog` et `/blog/<slug>` : articles ;
+- `/accessibilite` : déclaration d'accessibilité.
+
+**Contenu.** Les articles sont des données dans `apps/web/shared/blog.ts`. Liens internes en `[texte](/chemin)`, gras en `**texte**`, aucun HTML. Le maillage suit un cocon sémantique : un article pilier relié à chaque article, chaque article relié au pilier, à ses voisins et aux sections de la landing. Les liens morts sont vérifiés par un test.
+
+**SEO.**
+- Titre, description, URL canonique, Open Graph (image `public/og-image.png`) sur chaque page.
+- Fil d'Ariane.
+- JSON-LD schema.org : `Organization`, `WebSite`, `SoftwareApplication`, `FAQPage`, `Blog`, `BlogPosting`, `BreadcrumbList`.
+- `sitemap.xml` et `robots.txt` (seul le site public est indexable).
+- Une vraie 404 pour un article inconnu.
+- **Projet de cours : rien n'est indexé.** `robots.txt` bloque tous les robots (avec un commentaire qui l'explique) et chaque page porte `noindex, nofollow`. Pour une vraie mise en ligne, passer `SITE.indexable` à `true` (`apps/web/shared/site.ts`) : le SEO ci-dessus s'active tel quel.
+
+**GEO** (moteurs de réponse et assistants IA).
+- Chaque article s'ouvre sur un « En bref » qui donne la réponse d'abord, et se termine par une FAQ balisée.
+- `/llms.txt` résume le produit avec des faits vérifiables.
+
+**Performance.**
+- Pages pré-rendues, compressées au build (brotli, gzip) et sans JavaScript.
+- Police préchargée, aucune image dans le contenu principal (l'aperçu du chat est en HTML).
+- Lighthouse mobile : 100 en performance, accessibilité, bonnes pratiques et SEO sur toutes les pages (FCP 0,8 s, LCP 1,4 s, CLS 0).
+
+**Accessibilité.**
+- Lien d'évitement, zones et titres hiérarchisés, focus visible.
+- Contrastes AA dans les deux thèmes, mouvements réduits respectés.
+- Menu et FAQ en `<details>` natifs, utilisables au clavier.
+- Vérifiée par `e2e/marketing.spec.ts` : axe-core WCAG 2.2 AA en thème clair et sombre, clavier, SEO, liens.
+
+Mesurer : `pnpm --filter web build && node apps/web/.output/server/index.mjs`, puis `npx lighthouse http://localhost:3000/ --form-factor=mobile`. Après un déploiement : [PageSpeed Insights](https://pagespeed.web.dev/).
+
 ## Stack
 
 | Couche | Technologie |

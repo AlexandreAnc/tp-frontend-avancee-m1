@@ -118,6 +118,13 @@ export const ALLOWED_MIME_TYPES = [
   - Seule la conversation passe par le fournisseur : analyse, OCR, recherche et embeddings restent sur `dashia`.
   - Adaptateurs dans `agent/src/llm` : SDK officiel Anthropic pour Claude, API compatible OpenAI pour les autres, derrière l'interface `ChatBackend` (même boucle multi-agents).
 
+## Site public (landing, blog)
+
+- Pages publiques : `definePageMeta({ layout: 'marketing', marketing: true })`, route ajoutée à `MARKETING_ROUTES` (`nuxt.config.ts`) et à `isMarketingPath` (`shared/site.ts`). Elles sont pré-rendues et servies **sans JavaScript** : toute interaction passe par des éléments natifs (`<details>`, liens, ancres), jamais par un `@click` ou un `onMounted`.
+- SEO : `usePageSeo` sur chaque page (titre, description de 120 à 170 caractères, canonique, JSON-LD). Un seul `h1`, titres sans saut de niveau.
+- Article : une entrée dans `shared/blog.ts`. Il commence par un « En bref », chaque section a un `id`, et il contient au moins un lien vers le pilier et un vers la landing. `test/unit/blog.test.ts` refuse les liens morts.
+- Accessibilité : texte en contraste AA dans les deux thèmes (`dark:` suit le thème réellement affiché), liens soulignés dans les textes, cibles d'au moins 24 px. `e2e/marketing.spec.ts` (axe-core) doit passer.
+
 ## PWA
 
 - Le service worker gère : cache de l'app, historique hors ligne, réception des push, clics sur les notifications.
