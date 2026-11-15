@@ -7,6 +7,22 @@
  * Palette par défaut de Tailwind retirée : on n'écrit que des classes issues de ces tokens (bg-surface, text-muted…).
  * `static` : toutes les variables sont émises, les <style scoped> restants peuvent s'en servir.
  */
+/*
+ * `dark:` suit le thème réellement affiché : choisi dans les réglages (data-theme), ou celui du système en mode Auto.
+ * (Le variant par défaut de Tailwind ne regarde que le système et ignore le choix de l'utilisateur.)
+ */
+@custom-variant dark {
+  :root[data-theme='dark'] & {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) & {
+      @slot;
+    }
+  }
+}
+
 @theme static {
   --color-*: initial;
   --color-bg: #f7f7f5;
@@ -239,14 +255,25 @@
     opacity: 0.9;
   }
 
+  /* Contraste du texte ≥ 4,5:1 (WCAG AA) : vert foncé et texte blanc, ou vert vif et texte sombre en thème sombre. */
   .btn-primary {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #fff;
+    background: var(--color-primary-strong);
+    border-color: var(--color-primary-strong);
+    color: var(--color-white);
+
+    @variant dark {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-night);
+    }
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-primary-strong);
+    background: var(--color-emerald-dark);
+
+    @variant dark {
+      background: var(--color-emerald-light);
+    }
   }
 
   .btn-danger {

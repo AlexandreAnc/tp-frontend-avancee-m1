@@ -12,6 +12,7 @@
 | 4. Routines & NFC | ✅ Livrée : routines (heure, tag, manuel, agent), tags NFC (écriture Android, URL iPhone), écran au tap |
 | 6. Service ouvert | ✅ Livrée : IA au choix par utilisateur (DashIA, ou sa clé Claude / ChatGPT / Mistral / Gemini), application Philips Hue propre à chaque utilisateur |
 | 5. Multi-agents | ✅ Livrée : orchestrateur + spécialistes Documents / Planning / Maison, délégations parallèles ou enchaînées, outils cloisonnés par spécialiste, timeline par agent |
+| 7. Posture IA | ✅ Livrée : skills du projet, revue IA des PR, couverture avec seuils, E2E en CI et sur la prod, tests d'injection de prompt, `docs/IA-POSTURE.md` |
 
 Ajouts issus de la maquette DashIA : formats images (vision) et Excel, catégories du drive, aperçu des documents, stats CPU/RAM/VRAM de l'agent, choix du modèle de chat (admin), test de connexion, export des données.
 
@@ -133,6 +134,8 @@ L'agent n'est plus une seule boucle « modèle + 13 outils » : une équipe coor
    *Terminé quand* : taper le tag « Je pars » éteint les lampes et affiche le récap du jour sur les deux téléphones.
 5. **Multi-agents** : orchestrateur, spécialistes Documents / Planning / Maison, délégations parallèles et enchaînées, timeline par agent.
    *Terminé quand* : « de quoi parle mon document X et qu'ai-je au planning cette semaine ? » lance deux spécialistes en parallèle, chacun avec ses seuls outils, et la timeline montre qui a fait quoi.
+7. **Posture IA** : skills, revue de code IA, couverture, E2E, injection de prompt, journal des erreurs de l'IA.
+   *Terminé quand* : une PR passe la CI (couverture, E2E) et la revue IA, un document piégé ne peut pas faire agir un autre spécialiste (test), et `docs/IA-POSTURE.md` documente chaque erreur réelle avec son garde-fou.
 
 ## Compatibilité
 

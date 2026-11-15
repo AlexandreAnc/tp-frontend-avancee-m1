@@ -1,4 +1,5 @@
-# CI : lint, types et tests (avec PostgreSQL + pgvector) sur chaque push et pull request.
+# CI : lint, types, tests avec seuils de couverture (PostgreSQL + pgvector) et parcours E2E dans un navigateur,
+# sur chaque push et pull request.
 # CD : sur main, images construites ici (le VPS de 4 Go ne compile rien), publiées sur GHCR,
 # puis déployées sur le VPS par SSH (deploy/deploy.sh : pull, migrations, redémarrage).
 name: CI/CD
@@ -38,11 +39,66 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: '**/coverage/'
+          retention-days: 14
+
+  # Parcours réel dans Chromium contre l'app compilée : inscription, dépôt, reconnexion.
+  # Il aurait attrapé les deux bugs vus seulement en prod (stockage non inscriptible, déconnexions sur 429).
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app
+      BETTER_AUTH_URL: http://localhost:3000
+      STORAGE_DIR: ./.data/files
+      VAPID_SUBJECT: mailto:ci@example.com
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Secrets jetables, générés pour ce job uniquement.
+      - name: Secrets de test
+        run: |
+          echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          node -e "const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey+'\\nVAPID_PRIVATE_KEY='+k.privateKey)" >> "$GITHUB_ENV"
+      - run: pnpm db:migrate
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 14
 
   image:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: check
+    needs: [check, e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,7 +137,9 @@ jobs:
   deploy:
     needs: image
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      url: ${{ vars.PROD_URL || 'https://tp-developpement-fullstack-m1.aanc.fr' }}
     permissions:
       contents: read
       packages: read
@@ -108,3 +166,24 @@ jobs:
             && cd /opt/dashia && git fetch --quiet origin main && git reset --quiet --hard ${{ github.sha }} \
             && IMAGE_REPO=${{ env.IMAGE_REPO }} IMAGE_TAG=${{ github.sha }} bash deploy/deploy.sh; \
             status=\$?; docker logout ghcr.io >/dev/null; exit \$status"
+
+  # Vérifie la prod réelle (Cloudflare, Caddy, conteneurs) sans rien y écrire.
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      E2E_BASE_URL: ${{ vars.PROD_URL || 'https://tp-developpement-fullstack-m1.aanc.fr' }}
+      E2E_READONLY: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

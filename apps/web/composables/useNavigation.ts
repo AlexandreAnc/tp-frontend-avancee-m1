@@ -12,7 +12,7 @@ export interface NavItem {
 
 /** Onglets de la barre du bas (mobile). Les autres pages sont dans « Plus ». */
 export const PRIMARY_NAV: NavItem[] = [
-  { to: '/', label: 'Accueil', icon: 'house' },
+  { to: '/panel', label: 'Accueil', icon: 'house' },
   { to: '/chat', label: 'Discussions', icon: 'comments', activeIcon: 'comments-solid' },
   { to: '/drive', label: 'Drive', icon: 'folder', activeIcon: 'folder-solid' },
   { to: '/maison', label: 'Maison', icon: 'lightbulb' },
@@ -29,6 +29,6 @@ export const SECONDARY_NAV: NavItem[] = [
 ];
 
 export function isRouteActive(path: string, to: string): boolean {
-  if (to === '/') return path === '/';
+  if (to === '/panel') return path === '/panel';
   return path === to || path.startsWith(`${to}/`);
 }

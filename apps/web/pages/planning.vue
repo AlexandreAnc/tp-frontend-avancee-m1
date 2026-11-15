@@ -153,7 +153,7 @@ const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 
 <template>
   <div>
-    <PageHeader title="Planning" :subtitle="monthLabel" back="/">
+    <PageHeader title="Planning" :subtitle="monthLabel" back="/panel">
       <template #actions>
         <button class="icon-btn" type="button" aria-label="Période précédente" @click="shift(-1)"><AppIcon name="arrow-left" /></button>
         <button class="icon-btn" type="button" aria-label="Aujourd'hui" @click="selected = startOfDay(new Date())"><AppIcon name="calendar-check" /></button>

@@ -118,6 +118,18 @@ export const ALLOWED_MIME_TYPES = [
   - Seule la conversation passe par le fournisseur : analyse, OCR, recherche et embeddings restent sur `dashia`.
   - Adaptateurs dans `agent/src/llm` : SDK officiel Anthropic pour Claude, API compatible OpenAI pour les autres, derrière l'interface `ChatBackend` (même boucle multi-agents).
 
+## En-têtes de sécurité
+
+- **CSP** : posée en `<meta>` sur chaque page par `server/plugins/csp.ts` ; les scripts en ligne sont autorisés par leur empreinte. N'ajoute jamais `unsafe-inline` ni `unsafe-eval` à `script-src`. Une nouvelle source externe (image, police, API appelée depuis le navigateur) doit être ajoutée dans `server/utils/csp.ts`, et `e2e/security.spec.ts` doit rester vert.
+- **CSRF** : toute route non `GET` de `/api` est protégée par `server/middleware/csrf.ts`. Une route appelée hors navigateur et authentifiée par token rejoint `EXEMPT_PREFIXES`, avec une justification.
+
+## Site public (landing, blog)
+
+- Pages publiques : `definePageMeta({ layout: 'marketing', marketing: true })`, route ajoutée à `MARKETING_ROUTES` (`nuxt.config.ts`) et à `isMarketingPath` (`shared/site.ts`). Elles sont pré-rendues et servies **sans JavaScript** : toute interaction passe par des éléments natifs (`<details>`, liens, ancres), jamais par un `@click` ou un `onMounted`.
+- SEO : `usePageSeo` sur chaque page (titre, description de 120 à 170 caractères, canonique, JSON-LD). Un seul `h1`, titres sans saut de niveau.
+- Article : une entrée dans `shared/blog.ts`. Il commence par un « En bref », chaque section a un `id`, et il contient au moins un lien vers le pilier et un vers la landing. `test/unit/blog.test.ts` refuse les liens morts.
+- Accessibilité : texte en contraste AA dans les deux thèmes (`dark:` suit le thème réellement affiché), liens soulignés dans les textes, cibles d'au moins 24 px. `e2e/marketing.spec.ts` (axe-core) doit passer.
+
 ## PWA
 
 - Le service worker gère : cache de l'app, historique hors ligne, réception des push, clics sur les notifications.
@@ -131,12 +143,21 @@ export const ALLOWED_MIME_TYPES = [
 - Commits au format Conventional Commits (`feat:`, `fix:`, `refactor:`…).
 - Migrations Drizzle générées, jamais modifiées à la main après merge.
 - Gestion d'erreurs explicite : erreurs typées côté serveur, messages compréhensibles côté utilisateur.
-- Tests : services serveur et outils de l'agent en priorité (Vitest).
+- Tests : services serveur et outils de l'agent en priorité (Vitest), parcours critiques en E2E (Playwright, `apps/web/e2e`). Un outil qui agit a son cas dans `apps/agent/test/prompt-injection.test.ts`.
 - Styles : classes Tailwind directement dans les templates. Pas de couleur, rayon ou ombre en dur (hex, `rgb()`, px arbitraires) : on passe par les tokens du `@theme` (`bg-night/45`, `rounded-lg`, `shadow-popover`…), ce qui garde le thème clair / sombre cohérent. Les briques de base du design system (`.btn`, `.input`, `.card`, `.chip`, `.badge`, `.switch`…) sont écrites une fois dans `@layer components` de `main.css` et se combinent avec des utilitaires ; tout autre motif répété devient un composant Vue, pas une classe `@apply`. Un bloc `<style scoped>` n'est accepté que pour ce que Tailwind exprime mal (keyframes, sélecteurs sur du contenu injecté ou des pseudo-éléments complexes).
+
+## Travailler avec un agent de code
+
+- Skills du projet dans `.claude/skills/` : `scaffold-api-route` (route + service + test), `add-agent-tool` (outil d'un spécialiste), `review` (checklist de revue, aussi utilisée par la revue IA en CI). Les suivre plutôt que les habitudes génériques du modèle.
+- Le code généré est relu et compris avant d'être proposé. Un obstacle contourné (limite, erreur, test qui gêne) est **signalé**, jamais masqué.
+- Une correction de bug vient avec un test de non-régression dont on a vérifié qu'il échoue sans la correction.
+- Modifications par pull request : CI verte (lint, types, couverture, E2E) et réponse à chaque remarque de revue avant fusion.
+- Détails et retours d'expérience : `docs/IA-POSTURE.md`.
 
 ## Avant de considérer une tâche terminée
 
-- `pnpm typecheck`, `pnpm lint` et `pnpm test` passent.
+- `pnpm typecheck`, `pnpm lint` et `pnpm test:coverage` passent (les seuils de couverture ne baissent pas).
+- Un parcours utilisateur modifié (connexion, dépôt…) : `pnpm --filter web test:e2e` passe.
 - Les limites et le filtrage par `user_id` sont respectés pour tout nouveau code qui touche aux fichiers ou aux données utilisateur.
 - Tout nouveau message serveur ↔ agent est défini dans `packages/shared`.
 - Aucune action à effet de bord `confirm` ou `sensitive` n'est exécutée sans `pending_action` validée ; toute action `direct` est journalisée.

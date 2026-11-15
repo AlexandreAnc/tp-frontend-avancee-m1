@@ -67,7 +67,7 @@ async function decide(decision: 'approve' | 'reject') {
         </ul>
         <div class="grid w-full grid-cols-[1fr_1fr] gap-2">
           <NuxtLink to="/journal" class="btn">Voir le journal</NuxtLink>
-          <NuxtLink to="/" class="btn btn-ink">Terminé</NuxtLink>
+          <NuxtLink to="/panel" class="btn btn-ink">Terminé</NuxtLink>
         </div>
       </section>
 

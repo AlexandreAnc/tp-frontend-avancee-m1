@@ -47,7 +47,7 @@ const steps = computed<Step[]>(() => [
     text: 'Connectez Google Agenda pour le planning, puis Philips Hue pour la maison, depuis les réglages.',
     cta: 'Terminer',
     action: async () => {
-      await navigateTo('/');
+      await navigateTo('/panel');
     },
   },
 ]);
@@ -69,7 +69,7 @@ async function next() {
 
 function skip() {
   if (step.value < steps.value.length - 1) step.value++;
-  else void navigateTo('/');
+  else void navigateTo('/panel');
 }
 
 const features = [
@@ -82,7 +82,7 @@ const features = [
 <template>
   <header class="flex items-center justify-between pt-[58px] pb-2.5">
     <span class="mx-auto pl-12 text-xs font-extrabold text-muted">Étape {{ step + 1 }} sur {{ steps.length }}</span>
-    <button class="text-btn text-sm leading-4 text-muted" type="button" @click="navigateTo('/')">Passer</button>
+    <button class="text-btn text-sm leading-4 text-muted" type="button" @click="navigateTo('/panel')">Passer</button>
   </header>
 
   <div class="mt-5 flex gap-1.5" aria-hidden="true">
