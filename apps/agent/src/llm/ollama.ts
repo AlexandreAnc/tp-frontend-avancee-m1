@@ -16,7 +16,7 @@ export class LlmClient {
   private chatBackend: ChatBackend | null = null;
 
   constructor(
-    private readonly config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL' | 'CHAT_CONTEXT'>,
+    private readonly config: Pick<AgentConfig, 'OLLAMA_URL' | 'CHAT_MODEL' | 'EMBED_MODEL' | 'CHAT_CONTEXT' | 'CHAT_MAX_TOKENS'>,
     private readonly signal: AbortSignal,
     private readonly ollamaThinking: boolean,
     readonly supportsVision = false,
@@ -51,8 +51,15 @@ export class LlmClient {
       return this.chatBackend.chat({ messages: request.messages, tools: request.tools, think: request.think === true }, this.signal);
     }
     try {
-      const options = this.config.CHAT_CONTEXT ? { ...request.options, num_ctx: this.config.CHAT_CONTEXT } : request.options;
-      return await this.ollama.chat({ ...request, options, model: this.config.CHAT_MODEL, stream: false });
+      const options = {
+        ...request.options,
+        ...(this.config.CHAT_CONTEXT && { num_ctx: this.config.CHAT_CONTEXT }),
+        ...(this.config.CHAT_MAX_TOKENS && { num_predict: this.config.CHAT_MAX_TOKENS }),
+      };
+      const response = await this.ollama.chat({ ...request, options, model: this.config.CHAT_MODEL, stream: false });
+      // Réponse coupée par la limite : le modèle a bouclé. Une réponse tronquée ne vaut rien, on échoue tout de suite.
+      if (response.done_reason === 'length') throw new Error(`réponse du modèle interrompue après ${this.config.CHAT_MAX_TOKENS} tokens (le modèle a bouclé)`);
+      return response;
     } catch (error) {
       throw this.wrap(error);
     }

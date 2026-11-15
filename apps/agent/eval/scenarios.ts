@@ -526,12 +526,16 @@ const INTENTS: Intent[] = [
 export const INTENT_NAMES = INTENTS.map((intent) => intent.name);
 
 /** `count` scénarios répartis sur toutes les demandes, à partir de la graine `seed`. */
-export function generateScenarios(seed: number, count: number, split: Split): Scenario[] {
+export function generateScenarios(seed: number, count: number, split: Split, only?: readonly string[]): Scenario[] {
+  const intents = only?.length ? INTENTS.filter((intent) => only.includes(intent.name)) : INTENTS;
+  if (only?.length && intents.length !== only.length) {
+    throw new Error(`types de demande inconnus : ${only.filter((name) => !INTENTS.some((intent) => intent.name === name)).join(', ')}`);
+  }
   const random = new Random(seed);
   const scenarios: Scenario[] = [];
   let attempt = 0;
   while (scenarios.length < count && attempt < count * 5) {
-    const intent = INTENTS[attempt % INTENTS.length]!;
+    const intent = intents[attempt % intents.length]!;
     attempt++;
     const phrasings = intent.phrasings.filter((_, index) => (index % 4 === 3) === (split === 'test'));
     const generated = makeAccount(random);
