@@ -1,4 +1,6 @@
-# PWA Agent IA (nom à définir)
+# DashIA : documentation détaillée
+
+Vue d'ensemble, schémas d'architecture et choix techniques : [`README.md`](../README.md) à la racine du dépôt.
 
 Projet TP — PWA sur le thème de l'IA agentique. La façon dont l'IA a été utilisée pour le construire (skills, revue de code, refactoring assisté, tests du code généré, limites) est décrite dans [`IA-POSTURE.md`](IA-POSTURE.md). La consigne du TP et l’état de chaque exigence sont dans [`TP.md`](TP.md). La comparaison CSR / SSR / SSG est dans [`RENDU.md`](RENDU.md). Le fine-tuning du modèle local est raconté dans [`FINETUNING.md`](FINETUNING.md), et le plan de l'oral est dans [`ORAL.md`](ORAL.md).
 
@@ -144,7 +146,7 @@ Le VPS n'héberge que l'app, la base et les fichiers : **4 Go de RAM suffisent**
 ```
 Cloudflare (proxy, SSL « Full ») ──► VPS : Caddy (80/443) ──► web (Nuxt/Nitro) ──► Postgres + pgvector, volume de fichiers
                                                                ▲  WebSocket sortant wss://<domaine>/_agent
-                                           Mac : agent Node ──► Ollama natif (gemma4, bge-m3)
+                                           Mac : agent Node ──► Ollama natif (dashia-qwen3, bge-m3)
 ```
 
 **CI/CD** (`.github/workflows/ci-cd.yml`) : chaque push et pull request lance lint, types, tests avec seuils de couverture (PostgreSQL + pgvector) et le parcours E2E dans Chromium contre l'app compilée. Après chaque déploiement, un smoke test vérifie la prod sans y écrire. Sur `main`, les images sont construites par GitHub Actions et publiées sur GHCR (le VPS ne compile rien), puis déployées par SSH (`deploy/deploy.sh` : pull, migrations, redémarrage). Secrets de l'environnement `production` : `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (clé dédiée au déploiement), `VPS_KNOWN_HOSTS`. Variable facultative `PROD_URL` (URL testée par le smoke test).
@@ -187,7 +189,7 @@ CHAT_THINKING=true          # facultatif : false coupe le raisonnement (déconse
 | Modèle | Mémoire chargée | Score | Durée des 5 scénarios (MacBook M5) | Adapté à |
 |---|---|---|---|---|
 | `gemma4:26b` | ~18 Go | 5/5 | 71 s | machine de 24 Go ou plus |
-| `qwen3:4b` (contexte 8 192) | 3,9 Go (+ 0,7 Go pour `bge-m3`) | 5/5, une fois sur deux avec un identifiant inventé | ~350 s | **Mac M2 de 8 Go** (modèle de prod actuel) |
+| `qwen3:4b` (contexte 8 192) | 3,9 Go (+ 0,7 Go pour `bge-m3`) | 5/5, une fois sur deux avec un identifiant inventé | ~350 s | Mac M2 de 8 Go (remplacé en prod par `dashia-qwen3`, voir `FINETUNING.md`) |
 | `gemma4:e2b` | 7,9 Go | 4/5 (date de rappel fausse) | 54 s | trop lourd pour 8 Go malgré son nom |
 
 `qwen3:4b` ne lit pas les images : une photo déposée est refusée avec un message clair, les PDF et textes fonctionnent. Couper le raisonnement (`CHAT_THINKING=false`) ne fait rien gagner en vitesse et fait apparaître le raisonnement du modèle, en anglais, dans la réponse.
