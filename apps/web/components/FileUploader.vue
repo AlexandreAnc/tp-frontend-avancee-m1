@@ -69,8 +69,11 @@ function onPick(event: Event) {
   target.value = '';
 }
 
-/** Ouvre le sélecteur de fichiers (utilisé par le bouton « Ajouter » des états vides). */
-defineExpose({ pick: () => filesInput.value?.click() });
+/**
+ * `pick` ouvre le sélecteur de fichiers (bouton « Ajouter » des états vides) ;
+ * `upload` dépose des fichiers reçus autrement (partage du téléphone, « Ouvrir avec »), avec les mêmes contrôles.
+ */
+defineExpose({ pick: () => filesInput.value?.click(), upload });
 </script>
 
 <template>

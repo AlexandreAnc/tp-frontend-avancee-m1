@@ -8,6 +8,7 @@ export function useAuth() {
     await authClient.signOut();
     // Les réponses API en cache appartiennent à l'utilisateur qui se déconnecte.
     navigator.serviceWorker?.controller?.postMessage({ type: 'clear-user-cache' });
+    clearOutboxes(localStorage);
     clearNuxtState();
     await navigateTo('/login');
   }

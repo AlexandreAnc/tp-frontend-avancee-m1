@@ -22,7 +22,16 @@ Une PWA qui permet de discuter avec un **agent IA tournant en local** sur une ma
 - **IA au choix** : par défaut l'IA du service (DashIA, modèle local via Ollama). Chaque utilisateur peut brancher sa propre clé **Claude, ChatGPT, Mistral ou Gemini** (Réglages → Intelligence artificielle) : clé vérifiée, chiffrée, modèle au choix dans la liste du fournisseur. Seule la conversation passe par ce fournisseur ; l'analyse, la recherche et les embeddings restent sur DashIA.
 - **Connecteurs** : Google Agenda pour commencer, architecture MCP pour en ajouter d'autres.
 - **Validation humaine** : les actions qui comptent passent par une confirmation (notification push avec boutons, ou carte dans l'app) ; les actions sans risque (lampes, rappels) sont directes. Détail des niveaux de risque et des évolutions (panel, rappels, Philips Hue, routines NFC, passkeys) dans [`SCOPE.md`](SCOPE.md) ; inventaire des écrans pour la maquette dans [`FONCTIONNALITES.md`](FONCTIONNALITES.md).
-- **PWA** : installable, historique consultable hors ligne, file d'attente quand l'agent est indisponible, notifications push.
+- **PWA** (`@vite-pwa/nuxt`, service worker `apps/web/service-worker/sw.ts`), vérifiée dans Chromium par `e2e/pwa.spec.ts` :
+  - **Installable** : manifeste complet (`id`, `scope`, `display_override`, `launch_handler`, catégories), icônes « any » et **maskable** (fond plein, pictogramme dans la zone sûre), icône et méta iOS, **captures** mobile et ordinateur pour la fenêtre d'installation. Entrée **« Installer l'application »** dans Réglages : invite du navigateur (Chrome, Edge, Android), marche à suivre sur iPhone (Partager → « Sur l'écran d'accueil »), masquée une fois installée.
+  - **Raccourcis** sur l'icône (appui long / clic droit) : Nouvelle discussion, Drive, Maison, Planning. Relancer l'app réutilise la fenêtre ouverte (`focus-existing`).
+  - **Hors ligne** : le shell s'ouvre même sur une page jamais visitée, l'historique (discussions, drive, actions, réglages) reste consultable, un bandeau l'indique. Un **message écrit hors ligne** est gardé sur l'appareil (« En attente d'envoi ») et part tout seul au retour du réseau.
+  - **Partager vers DashIA** (Web Share Target) : un PDF, une photo ou un document partagé depuis une autre app du téléphone arrive dans le drive, après connexion si besoin. Sur ordinateur, **« Ouvrir avec DashIA »** fait de même pour PDF, Word, Excel et texte (`file_handlers`, Chrome et Edge).
+  - **Mises à jour** : une nouvelle version attend le clic sur « Recharger » (pas de rechargement en pleine saisie) ; l'app installée vérifie toutes les heures.
+  - **Notifications push** (boutons Valider / Refuser, clic sur le corps vers la carte), **pastille** du nombre d'actions à valider sur l'icône, file d'attente quand l'agent est indisponible.
+  - **Déconnexion** : caches de données, fichiers partagés en attente et messages non envoyés sont effacés de l'appareil.
+  - Images régénérables : `pnpm --filter web exec tsx scripts/pwa-assets.ts icons` (et `screenshots`, contre un serveur local).
+  - Limites : iOS n'a ni invite d'installation, ni partage vers une PWA, ni raccourcis, ni `launchQueue` ; les notifications n'y fonctionnent qu'une fois l'app installée.
 
 ## Architecture
 

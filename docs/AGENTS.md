@@ -133,7 +133,10 @@ export const ALLOWED_MIME_TYPES = [
 
 ## PWA
 
-- Le service worker gère : cache de l'app, historique hors ligne, réception des push, clics sur les notifications.
+- Le service worker gère : cache de l'app (et shell hors ligne pour toute page), historique hors ligne, réception des push, clics sur les notifications, réception des fichiers partagés (`share_target`, `utils/shared-files.ts`).
+- Mises à jour en mode « prompt » : pas de `skipWaiting()` d'office, l'utilisateur recharge depuis `AppUpdateToast`.
+- Toute donnée de l'utilisateur gardée sur l'appareil (cache, fichiers partagés, file d'envoi hors ligne `utils/outbox.ts`) est effacée à la déconnexion (`useAuth().signOut`, `USER_CACHES` du service worker).
+- Images de la PWA (maskable, iOS, raccourcis, captures) : générées par `scripts/pwa-assets.ts`, jamais retouchées à la main.
 - Les notifications de confirmation ont des boutons Valider / Refuser, **et** un clic sur le corps ouvre la carte de confirmation dans l'app (obligatoire : iOS n'affiche pas les boutons d'action).
 - Les actions en attente sont aussi visibles dans l'app, au cas où la notification est manquée.
 - L'interface affiche l'état de l'agent (en ligne / hors ligne) et le stockage utilisé (ex. 120 Mo / 500 Mo).

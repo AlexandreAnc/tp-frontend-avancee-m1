@@ -11,5 +11,6 @@ const route = useRoute();
     <!-- Chargés à part : le site public ne télécharge ni l'authentification ni WebAuthn. -->
     <LazyLockScreen />
     <LazyConfirmDialog />
+    <AppUpdateToast />
   </template>
 </template>
