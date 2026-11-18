@@ -121,6 +121,7 @@ export const ALLOWED_MIME_TYPES = [
 ## En-têtes de sécurité
 
 - **CSP** : posée en `<meta>` sur chaque page par `server/plugins/csp.ts` ; les scripts en ligne sont autorisés par leur empreinte. N'ajoute jamais `unsafe-inline` ni `unsafe-eval` à `script-src`. Une nouvelle source externe (image, police, API appelée depuis le navigateur) doit être ajoutée dans `server/utils/csp.ts`, et `e2e/security.spec.ts` doit rester vert.
+- **Scripts injectés par Cloudflare** (détection de bots `/cdn-cgi/challenge-platform/`, Web Analytics) : la CSP les bloque en prod, c'est voulu. Les tests E2E les reconnaissent par leur adresse ou leur empreinte (`e2e/console.ts`) ; n'élargis jamais ce filtre à d'autres scripts.
 - **CSRF** : toute route non `GET` de `/api` est protégée par `server/middleware/csrf.ts`. Une route appelée hors navigateur et authentifiée par token rejoint `EXEMPT_PREFIXES`, avec une justification.
 
 ## Site public (landing, blog)

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { ARTICLES } from '../shared/blog';
+import { watchConsole } from './console';
 
 // Site public : sans écriture, donc aussi lancé contre la prod après chaque déploiement.
 const PUBLIC_PAGES = ['/', '/blog', ...ARTICLES.map((article) => `/blog/${article.slug}`), '/accessibilite'];
@@ -54,10 +55,9 @@ test.describe('SEO et GEO', () => {
       expect(html).toContain('<h1');
       expect(html).not.toMatch(/<script[^>]+src=/);
 
-      const consoleErrors: string[] = [];
-      page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+      const pageConsole = watchConsole(page);
       await page.goto(path, { waitUntil: 'networkidle' });
-      expect(consoleErrors).toEqual([]);
+      expect(await pageConsole.errors()).toEqual([]);
       await expect(page.locator('h1')).toHaveCount(1);
       expect((await page.title()).length).toBeGreaterThan(20);
       expect(await page.locator('meta[name="description"]').getAttribute('content')).toMatch(/.{100,}/);

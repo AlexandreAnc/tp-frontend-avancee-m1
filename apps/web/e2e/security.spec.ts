@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { watchConsole } from './console';
 
 // Phase 4 du TP : Content Security Policy, XSS et CSRF, vérifiés dans un vrai navigateur.
 const PAGES = ['/', '/blog/assistant-ia-personnel-guide', '/rendu/csr/assistant-ia-personnel-guide', '/rendu/ssr/assistant-ia-personnel-guide', '/login'];
@@ -6,8 +7,7 @@ const PAGES = ['/', '/blog/assistant-ia-personnel-guide', '/rendu/csr/assistant-
 test.describe('Content Security Policy', () => {
   for (const path of PAGES) {
     test(`${path} : politique stricte, aucun script légitime bloqué`, async ({ page }) => {
-      const violations: string[] = [];
-      page.on('console', (message) => { if (/Content Security Policy/i.test(message.text())) violations.push(message.text()); });
+      const pageConsole = watchConsole(page, { cspOnly: true });
       const response = await page.goto(path, { waitUntil: 'networkidle' });
 
       expect(response!.headers()['content-security-policy']).toContain("frame-ancestors 'self'");
@@ -16,7 +16,7 @@ test.describe('Content Security Policy', () => {
       expect(policy).not.toContain('unsafe-inline\' \'sha');
       expect(policy!.split('; ').find((directive) => directive.startsWith('script-src'))).not.toContain('unsafe-inline');
       await expect(page.locator('h1')).toBeVisible();
-      expect(violations).toEqual([]);
+      expect(await pageConsole.errors()).toEqual([]);
     });
   }
 
