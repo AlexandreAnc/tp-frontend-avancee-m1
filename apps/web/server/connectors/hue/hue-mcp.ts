@@ -1,6 +1,7 @@
 import { hueLightPayloadSchema, hueRoomPayloadSchema, hueScenePayloadSchema } from '@app/shared';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { errorResult, structuredResult } from '../mcp';
 import type { HueApi } from './api';
 import { buildHomeState } from './resources';
 
@@ -21,8 +22,13 @@ const snapshotSchema = z.object({
   })),
 });
 
-function structured<T extends object>(result: T) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(result) }], structuredContent: result as Record<string, unknown> };
+/** Régler une luminosité allume la lumière, sauf si l'appel précise explicitement `on`. */
+function targetState(on: boolean | undefined, brightness: number | undefined) {
+  return { on: on ?? (brightness ? true : undefined), brightness };
+}
+
+function roomSnapshot(room: { id: string; on: boolean; brightness: number | null }): LightSnapshot {
+  return { kind: 'grouped_light', id: room.id, on: room.on, brightness: room.brightness };
 }
 
 /** Serveur MCP Philips Hue d'un utilisateur : lecture de la maison et pilotage des lumières. */
@@ -31,7 +37,7 @@ export function createHueMcpServer(api: HueApi): McpServer {
 
   const home = async () => buildHomeState(await api.getResources());
 
-  server.registerTool('get_home', { description: 'Pièces, lampes et scènes de la maison' }, async () => structured(await home()));
+  server.registerTool('get_home', { description: 'Pièces, lampes et scènes de la maison' }, async () => structuredResult(await home()));
 
   server.registerTool('set_room', {
     description: "Allume, éteint ou règle une pièce, ou toute la maison avec roomId « all »",
@@ -39,10 +45,9 @@ export function createHueMcpServer(api: HueApi): McpServer {
   }, async ({ roomId, on, brightness }) => {
     const state = await home();
     const rooms = roomId === 'all' ? state.rooms.filter((room) => room.kind === 'room') : state.rooms.filter((room) => room.id === roomId);
-    if (rooms.length === 0) return { isError: true, content: [{ type: 'text' as const, text: 'Pièce inconnue' }] };
-    const previous: LightSnapshot[] = rooms.map((room) => ({ kind: 'grouped_light', id: room.id, on: room.on, brightness: room.brightness }));
-    for (const room of rooms) await api.setGroupedLight(room.id, { on: on ?? (brightness ? true : undefined), brightness });
-    return structured({ previous });
+    if (rooms.length === 0) return errorResult('Pièce inconnue');
+    for (const room of rooms) await api.setGroupedLight(room.id, targetState(on, brightness));
+    return structuredResult({ previous: rooms.map(roomSnapshot) });
   });
 
   server.registerTool('set_light', {
@@ -50,9 +55,10 @@ export function createHueMcpServer(api: HueApi): McpServer {
     inputSchema: hueLightPayloadSchema,
   }, async ({ lightId, on, brightness }) => {
     const light = (await home()).rooms.flatMap((room) => room.lights).find((candidate) => candidate.id === lightId);
-    if (!light) return { isError: true, content: [{ type: 'text' as const, text: 'Lampe inconnue' }] };
-    await api.setLight(lightId, { on: on ?? (brightness ? true : undefined), brightness });
-    return structured({ previous: [{ kind: 'light', id: light.id, on: light.on, brightness: light.brightness }] });
+    if (!light) return errorResult('Lampe inconnue');
+    await api.setLight(lightId, targetState(on, brightness));
+    const previous: LightSnapshot[] = [{ kind: 'light', id: light.id, on: light.on, brightness: light.brightness }];
+    return structuredResult({ previous });
   });
 
   server.registerTool('activate_scene', {
@@ -61,10 +67,10 @@ export function createHueMcpServer(api: HueApi): McpServer {
   }, async ({ sceneId }) => {
     const state = await home();
     const scene = state.scenes.find((candidate) => candidate.id === sceneId);
-    if (!scene) return { isError: true, content: [{ type: 'text' as const, text: 'Scène inconnue' }] };
+    if (!scene) return errorResult('Scène inconnue');
     const room = state.rooms.find((candidate) => candidate.id === scene.roomId);
     await api.recallScene(sceneId);
-    return structured({ previous: room ? [{ kind: 'grouped_light', id: room.id, on: room.on, brightness: room.brightness }] : [] });
+    return structuredResult({ previous: room ? [roomSnapshot(room)] : [] });
   });
 
   server.registerTool('restore', {
@@ -76,7 +82,7 @@ export function createHueMcpServer(api: HueApi): McpServer {
       if (snapshot.kind === 'grouped_light') await api.setGroupedLight(snapshot.id, state);
       else await api.setLight(snapshot.id, state);
     }
-    return structured({ restored: previous.length });
+    return structuredResult({ restored: previous.length });
   });
 
   return server;

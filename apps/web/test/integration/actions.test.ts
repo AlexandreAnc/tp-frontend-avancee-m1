@@ -16,7 +16,7 @@ vi.mock('../../server/connectors/registry', async (importOriginal) => ({
   executeAction: (...args: unknown[]) => executeAction(...args),
 }));
 
-const { requestAction, decideAction, expireActions } = await import('../../server/services/actions');
+const { requestAction, decideAction, expireActions, getAction, listActions } = await import('../../server/services/actions');
 
 const action = {
   type: 'google_calendar.create_event' as const,
@@ -79,5 +79,33 @@ describe.skipIf(skipDb)('actions en attente', () => {
     await expireActions();
     const [row] = await db.select().from(schema.pendingActions).where(eq(schema.pendingActions.id, actionId));
     expect(row?.status).toBe('expired');
+  });
+});
+
+describe.skipIf(skipDb)('consultation et échec des actions', () => {
+  it("liste et lit les actions de l'utilisateur, filtrées par statut", async () => {
+    const userId = await createUser();
+    const intruder = await createUser();
+    const { actionId } = await propose(userId);
+    await propose(userId);
+    await decideAction(actionId, { decision: 'reject' }, { userId, sessionId: 'session-test' });
+
+    expect(await listActions(userId)).toHaveLength(2);
+    expect((await listActions(userId, 'rejected')).map((action) => action.id)).toEqual([actionId]);
+    expect(await getAction(userId, actionId)).toMatchObject({ id: actionId, status: 'rejected', decidedAt: expect.any(String) });
+    expect(await listActions(intruder)).toEqual([]);
+    await expect(getAction(intruder, actionId)).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it("marque l'action en échec sans divulguer une erreur technique", async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    executeAction.mockRejectedValueOnce(new Error('ECONNRESET 10.0.0.3:443'));
+    const userId = await createUser();
+    const { actionId, token } = await propose(userId);
+
+    const decided = await decideAction(actionId, { decision: 'approve', token }, null);
+    expect(decided).toMatchObject({ status: 'failed', error: "L'exécution de l'action a échoué." });
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
   });
 });

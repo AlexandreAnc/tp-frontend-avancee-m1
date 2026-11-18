@@ -25,3 +25,10 @@ export const sampleAnalysis = {
   keyInfo: { dates: [], amounts: [], names: [] },
   suggestedActions: [],
 };
+
+/** Session Better Auth valide une heure (la validation forte par passkey y est rattachée). */
+export async function createSession(userId: string): Promise<string> {
+  const id = randomUUID();
+  await db.insert(schema.session).values({ id, userId, token: randomUUID(), expiresAt: new Date(Date.now() + 3_600_000) });
+  return id;
+}

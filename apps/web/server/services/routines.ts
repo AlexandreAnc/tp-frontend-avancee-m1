@@ -1,5 +1,5 @@
 import type { ProposedAction, RoutineInput, RoutineRunStatus, RoutineStep, RoutineStepResult, RoutineTrigger } from '@app/shared';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import { db, schema } from '../db';
 import { AppError, notFound } from '../utils/errors';
 import { requestAction } from './actions';
@@ -184,9 +184,11 @@ export async function runScheduledRoutines(now = new Date()): Promise<number> {
   return count;
 }
 
-export async function listRuns(userId: string, limit = 30) {
+/** Dernières exécutions, les plus récentes d'abord ; `before` pagine par date (journal). */
+export async function listRuns(userId: string, options: { before?: Date; limit?: number } = {}) {
   const rows = await db.select({ run: routineRuns, name: routines.name }).from(routineRuns)
     .innerJoin(routines, eq(routines.id, routineRuns.routineId))
-    .where(eq(routineRuns.userId, userId)).orderBy(desc(routineRuns.createdAt)).limit(limit);
+    .where(and(eq(routineRuns.userId, userId), options.before ? lt(routineRuns.createdAt, options.before) : undefined))
+    .orderBy(desc(routineRuns.createdAt)).limit(options.limit ?? 30);
   return rows.map(({ run, name }) => ({ ...toRunDto(run), routineName: name }));
 }

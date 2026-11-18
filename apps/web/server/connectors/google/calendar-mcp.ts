@@ -2,6 +2,7 @@ import { calendarEventPayloadSchema } from '@app/shared';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { google } from 'googleapis';
 import { z } from 'zod';
+import { structuredResult } from '../mcp';
 import type { GoogleOAuthClient } from './oauth';
 
 const listEventsInput = z.object({
@@ -17,10 +18,6 @@ export interface CalendarEvent {
   allDay: boolean;
   location: string | null;
   link: string | null;
-}
-
-function structured<T extends object>(result: T) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(result) }], structuredContent: result as Record<string, unknown> };
 }
 
 /** Serveur MCP Google Agenda, instancié pour un utilisateur avec ses tokens OAuth. */
@@ -42,7 +39,7 @@ export function createGoogleCalendarMcpServer(auth: GoogleOAuthClient): McpServe
         end: { dateTime: event.end },
       },
     });
-    return structured({ eventId: response.data.id ?? null, htmlLink: response.data.htmlLink ?? null });
+    return structuredResult({ eventId: response.data.id ?? null, htmlLink: response.data.htmlLink ?? null });
   });
 
   server.registerTool('list_events', {
@@ -66,7 +63,7 @@ export function createGoogleCalendarMcpServer(auth: GoogleOAuthClient): McpServe
       location: item.location ?? null,
       link: item.htmlLink ?? null,
     }));
-    return structured({ events });
+    return structuredResult({ events });
   });
 
   return server;

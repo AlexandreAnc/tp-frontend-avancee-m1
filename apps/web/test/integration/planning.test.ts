@@ -16,8 +16,8 @@ vi.mock('../../server/services/tasks', () => ({ enqueueTask: vi.fn(async () => '
 const { requestAction } = await import('../../server/services/actions');
 const { undoActivity, listActivity } = await import('../../server/services/activity');
 const reminders = await import('../../server/services/reminders');
-const { runDigests, localParts } = await import('../../server/services/digest');
-const { updateSettings } = await import('../../server/services/settings');
+const { buildDigest, runDigests, localParts } = await import('../../server/services/digest');
+const { getSettings, settingsUpdateSchema, toSettingsDto, updateSettings } = await import('../../server/services/settings');
 const { getAgenda } = await import('../../server/services/agenda');
 const files = await import('../../server/services/files');
 
@@ -118,6 +118,40 @@ describe.skipIf(skipDb)('résumé quotidien', () => {
     await runDigests(new Date('2026-11-14T07:50:00Z')); // 8h50, même jour
     expect(digestsFor()).toHaveLength(1);
     expect(digestsFor()[0]!.payload).toMatchObject({ title: 'Votre journée', url: '/panel' });
+  });
+  it('résume rappels, échéances de la semaine et actions à valider, au pluriel près', async () => {
+    const userId = await createUser();
+    const now = new Date();
+    expect(await buildDigest(userId, now)).toBe('Rien de prévu aujourd’hui.');
+
+    const file = await files.uploadFile(userId, { fileName: 'avis.md', stream: textStream('Avis') });
+    const inThreeDays = new Date(now.getTime() + 3 * 86_400_000).toISOString().slice(0, 10);
+    await files.saveFileIndex(userId, file.id, {
+      embedModel: 'bge-m3', text: 'Avis', chunks: [],
+      analysis: { ...sampleAnalysis, keyInfo: { dates: [{ label: 'Paiement', value: inThreeDays, iso: inThreeDays, isDeadline: true }], amounts: [], names: [] } },
+    });
+    await reminders.createReminder(userId, { text: 'Appeler', remindAt: inOneHour(), source: 'user' });
+    await reminders.createReminder(userId, { text: 'Rappeler', remindAt: inOneHour(), source: 'user' });
+    await requestAction(userId, {
+      action: { type: 'google_calendar.create_event', payload: { title: 'RDV', start: '2026-12-01T09:00:00+01:00', end: '2026-12-01T10:00:00+01:00' } },
+      summary: 'RDV', conversationId: null, trigger: 'agent',
+    });
+
+    expect(await buildDigest(userId, now)).toBe('2 rappels · 1 échéance cette semaine · 1 action à valider');
+  });
+});
+
+describe.skipIf(skipDb)('réglages', () => {
+  it('refuse un fuseau horaire inconnu', () => {
+    expect(settingsUpdateSchema.safeParse({ timezone: 'Europe/Paris' }).success).toBe(true);
+    expect(settingsUpdateSchema.safeParse({ timezone: 'Mars/Olympus_Mons' }).success).toBe(false);
+  });
+
+  it('crée les réglages par défaut au premier accès, une seule fois', async () => {
+    const userId = await createUser();
+    const [first, second] = await Promise.all([getSettings(userId), getSettings(userId)]);
+    expect(first).toEqual(second);
+    expect(toSettingsDto(first)).toMatchObject({ timezone: 'Europe/Paris', digestEnabled: false, hasUnlockPin: false });
   });
 });
 

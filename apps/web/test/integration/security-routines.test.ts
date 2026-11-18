@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { db, schema } from '../../server/db';
 import type * as Registry from '../../server/connectors/registry';
 import type { PushPayload } from '../../server/services/push';
-import { createUser, skipDb } from './helpers';
+import { createSession, createUser, skipDb } from './helpers';
 
 const sent: { userId: string; payload: PushPayload }[] = [];
 vi.mock('../../server/services/push', () => ({
@@ -29,12 +29,6 @@ const routines = await import('../../server/services/routines');
 const tags = await import('../../server/services/tags');
 const { listReminders } = await import('../../server/services/reminders');
 const { updateSettings } = await import('../../server/services/settings');
-
-async function sessionFor(userId: string) {
-  const id = randomUUID();
-  await db.insert(schema.session).values({ id, userId, token: randomUUID(), expiresAt: new Date(Date.now() + 3_600_000) });
-  return id;
-}
 
 async function addPasskey(userId: string) {
   await db.insert(schema.passkey).values({
@@ -63,7 +57,7 @@ describe.skipIf(skipDb)('validation forte (actions sensibles)', () => {
   it('exige Face ID récent quand une passkey existe, puis exécute', async () => {
     const userId = await createUser();
     await addPasskey(userId);
-    const sessionId = await sessionFor(userId);
+    const sessionId = await createSession(userId);
     const created = await requestAction(userId, { action: sensitiveAction, summary: 'Action sensible', conversationId: null, trigger: 'agent' });
     if (created.status !== 'pending') throw new Error('attendu : en attente');
 
@@ -75,7 +69,7 @@ describe.skipIf(skipDb)('validation forte (actions sensibles)', () => {
   it("refuse une vérification trop ancienne, mais laisse toujours refuser l'action", async () => {
     const userId = await createUser();
     await addPasskey(userId);
-    const sessionId = await sessionFor(userId);
+    const sessionId = await createSession(userId);
     await db.insert(schema.stepUps).values({ sessionId, verifiedAt: new Date(Date.now() - 10 * 60_000) });
     const created = await requestAction(userId, { action: sensitiveAction, summary: 'Action sensible', conversationId: null, trigger: 'agent' });
     if (created.status !== 'pending') throw new Error('attendu : en attente');
@@ -88,7 +82,7 @@ describe.skipIf(skipDb)('validation forte (actions sensibles)', () => {
     const userId = await createUser();
     await addPasskey(userId);
     await updateSettings(userId, { biometricForSensitive: false });
-    const sessionId = await sessionFor(userId);
+    const sessionId = await createSession(userId);
     const created = await requestAction(userId, { action: sensitiveAction, summary: 'Action sensible', conversationId: null, trigger: 'agent' });
     if (created.status !== 'pending') throw new Error('attendu : en attente');
     await expect(decideAction(created.actionId, { decision: 'approve' }, { userId, sessionId })).resolves.toMatchObject({ status: 'executed' });
@@ -169,5 +163,59 @@ describe.skipIf(skipDb)('tags NFC', () => {
     await tags.revokeTag(userId, tag.id);
     await expect(tags.scanTag(userId, tag.publicId)).rejects.toMatchObject({ code: 'not_found' });
     expect(await tags.listTags(userId)).toEqual([]);
+  });
+});
+
+describe.skipIf(skipDb)('routines : gestion et étapes', () => {
+  it('modifie, liste avec la dernière exécution, et supprime une routine', async () => {
+    const userId = await createUser();
+    const routine = await routines.createRoutine(userId, { name: 'Matin', icon: 'sun', enabled: true, schedule: null, steps: [steps[1]!] });
+    await routines.runRoutine(userId, routine.id, 'manual');
+
+    const updated = await routines.updateRoutine(userId, routine.id, { name: 'Réveil', enabled: false });
+    expect(updated).toMatchObject({ name: 'Réveil', enabled: false, lastRun: { status: 'success', trigger: 'manual' } });
+    expect((await routines.listRoutines(userId))[0]!.lastRun).toMatchObject({ status: 'success' });
+    expect((await routines.listRuns(userId))[0]).toMatchObject({ routineName: 'Réveil' });
+
+    // En pause : seul un lancement manuel l'exécute.
+    await expect(routines.runRoutine(userId, routine.id, 'tag')).rejects.toMatchObject({ code: 'conflict' });
+
+    const intruder = await createUser();
+    await expect(routines.updateRoutine(intruder, routine.id, { name: 'x' })).rejects.toMatchObject({ code: 'not_found' });
+    await expect(routines.deleteRoutine(intruder, routine.id)).rejects.toMatchObject({ code: 'not_found' });
+    await routines.deleteRoutine(userId, routine.id);
+    expect(await routines.listRoutines(userId)).toEqual([]);
+  });
+
+  it("pose la question à l'agent dans une nouvelle discussion", async () => {
+    const userId = await createUser();
+    const routine = await routines.createRoutine(userId, {
+      name: 'Bonjour', icon: 'sun', enabled: true, schedule: null,
+      steps: [{ type: 'agent', prompt: 'Résume ma journée', label: 'Résumé' }],
+    });
+    const run = await routines.runRoutine(userId, routine.id, 'manual');
+    expect(run.status).toBe('success');
+    expect(run.steps[0]).toMatchObject({ status: 'queued', openUrl: expect.stringMatching(/^\/chat\/[\w-]+$/) });
+  });
+
+  it('les étapes Hue passent par le niveau de risque des actions (exécution directe journalisée)', async () => {
+    const userId = await createUser();
+    const routine = await routines.createRoutine(userId, {
+      name: 'Cinéma', icon: 'film', enabled: true, schedule: null,
+      steps: [{ type: 'hue.activate_scene', payload: { sceneId: 'scene-cine' }, label: 'Scène cinéma' }],
+    });
+    const run = await routines.runRoutine(userId, routine.id, 'manual');
+    // Hue n'est pas connecté : l'étape échoue avec le message du connecteur, et le run est en échec complet.
+    expect(run).toMatchObject({ status: 'failed', steps: [{ status: 'failed', error: expect.stringContaining('Philips Hue') }] });
+    const [activity] = await db.select().from(schema.activityLog).where(eq(schema.activityLog.userId, userId));
+    expect(activity).toMatchObject({ type: 'hue.activate_scene', trigger: 'routine', triggerRef: routine.id, status: 'failed' });
+  });
+
+  it('notifie le résultat d’une routine programmée', async () => {
+    const userId = await createUser();
+    await updateSettings(userId, { timezone: 'UTC' });
+    await routines.createRoutine(userId, { name: 'Pause', icon: 'mug', enabled: true, schedule: { time: '15:00', days: [3] }, steps: [steps[0]!, steps[1]!] });
+    await routines.runScheduledRoutines(new Date('2026-11-18T15:00:10Z'));
+    expect(sent.find((entry) => entry.userId === userId && entry.payload.url === '/routines')?.payload.body).toBe('2 actions effectuées');
   });
 });

@@ -1,3 +1,4 @@
+import type { ActionTrigger, PendingActionStatus, RoutineTrigger } from '@app/shared';
 import { and, desc, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import { db, schema } from '../db';
 import { listActivity } from './activity';
@@ -33,9 +34,36 @@ const ACTIVITY_ICONS: Record<string, JournalEntry['icon']> = {
   'drive.move_file': 'folder',
 };
 
+/** Origine des actions directes (celles des routines sont regroupées sous leur exécution). */
+const ACTIVITY_ORIGINS: Record<Exclude<ActionTrigger, 'routine'>, string> = {
+  agent: 'Agent',
+  tag: 'Tag NFC',
+  panel: 'Vous',
+  schedule: 'Vous',
+};
+
+const RUN_ORIGINS: Record<RoutineTrigger, string> = {
+  manual: 'Vous',
+  tag: 'Tag NFC',
+  schedule: 'Programmée',
+  agent: 'Agent',
+};
+
 /**
- * Journal unifié : actions directes, actions validées ou refusées, documents analysés ou en erreur.
- * Pagination par date (`before`).
+ * Action soumise à validation, une fois décidée : statut affiché, origine, icône (sinon celle du type d'action).
+ * `approved` est l'état transitoire pendant l'exécution : validée, donc jamais affichée comme refusée.
+ */
+const DECIDED_ACTIONS: Record<Exclude<PendingActionStatus, 'pending'>, { status: JournalEntry['status']; origin: string; icon?: JournalEntry['icon'] }> = {
+  approved: { status: 'success', origin: 'Validé par vous' },
+  executed: { status: 'success', origin: 'Validé par vous' },
+  failed: { status: 'failed', origin: 'Validé par vous', icon: 'triangle-exclamation' },
+  rejected: { status: 'refused', origin: 'Refusée par vous', icon: 'ban' },
+  expired: { status: 'expired', origin: 'Non validée sous 15 min', icon: 'hourglass' },
+};
+
+/**
+ * Journal unifié : actions directes, actions validées ou refusées, documents analysés ou en erreur,
+ * exécutions de routines. Pagination par date (`before`) : chaque source est lue avant cette date.
  */
 export async function listJournal(userId: string, options: { before?: Date; limit?: number } = {}) {
   const limit = Math.min(options.limit ?? 30, 100);
@@ -52,7 +80,7 @@ export async function listJournal(userId: string, options: { before?: Date; limi
       .from(files)
       .where(and(eq(files.userId, userId), isNull(files.deletedAt), inArray(files.status, ['ready', 'failed']), before ? lt(processedAt, before) : undefined))
       .orderBy(desc(processedAt)).limit(limit),
-    listRuns(userId, limit),
+    listRuns(userId, { before, limit }),
   ]);
 
   const entries: JournalEntry[] = [
@@ -63,21 +91,21 @@ export async function listJournal(userId: string, options: { before?: Date; limi
       title: entry.summary,
       detail: entry.error,
       status: entry.status === 'executed' ? 'success' : entry.status === 'failed' ? 'failed' : 'undone',
-      origin: entry.trigger === 'agent' ? 'Agent' : entry.trigger === 'routine' ? 'Routine' : entry.trigger === 'tag' ? 'Tag NFC' : 'Vous',
+      origin: ACTIVITY_ORIGINS[entry.trigger as Exclude<ActionTrigger, 'routine'>],
       createdAt: entry.createdAt,
       activityId: entry.id,
       undoable: entry.undoable,
     })),
     ...decided.map((row): JournalEntry => {
-      const status = row.status === 'executed' ? 'success' : row.status === 'failed' ? 'failed' : row.status === 'expired' ? 'expired' : 'refused';
+      const outcome = DECIDED_ACTIONS[row.status as Exclude<PendingActionStatus, 'pending'>];
       return {
         id: `action:${row.id}`,
         category: 'actions',
-        icon: status === 'refused' ? 'ban' : status === 'expired' ? 'hourglass' : status === 'failed' ? 'triangle-exclamation' : ACTIVITY_ICONS[row.type] ?? 'check',
+        icon: outcome.icon ?? ACTIVITY_ICONS[row.type] ?? 'check',
         title: row.summary,
         detail: row.error,
-        status,
-        origin: status === 'refused' ? 'Refusée par vous' : status === 'expired' ? 'Non validée sous 15 min' : 'Validé par vous',
+        status: outcome.status,
+        origin: outcome.origin,
         createdAt: row.updatedAt.toISOString(),
         activityId: null,
         undoable: false,
@@ -97,7 +125,7 @@ export async function listJournal(userId: string, options: { before?: Date; limi
       activityId: null,
       undoable: false,
     })),
-    ...runs.filter((run) => !before || new Date(run.createdAt) < before).map((run): JournalEntry => {
+    ...runs.map((run): JournalEntry => {
       const done = run.steps.filter((step) => step.status !== 'failed').length;
       const failedStep = run.steps.find((step) => step.status === 'failed');
       return {
@@ -107,7 +135,7 @@ export async function listJournal(userId: string, options: { before?: Date; limi
         title: `Routine « ${run.routineName} »`,
         detail: failedStep ? `${done}/${run.steps.length} actions · ${failedStep.label} : ${failedStep.error}` : `${done}/${run.steps.length} actions`,
         status: run.status === 'success' ? 'success' : 'failed',
-        origin: run.trigger === 'tag' ? 'Tag NFC' : run.trigger === 'schedule' ? 'Programmée' : run.trigger === 'agent' ? 'Agent' : 'Vous',
+        origin: RUN_ORIGINS[run.trigger],
         createdAt: run.createdAt,
         activityId: null,
         undoable: false,
