@@ -9,10 +9,10 @@ import {
 } from '@app/shared';
 import { ApiClient } from '../api/client';
 import type { AgentConfig } from '../config';
-import { LlmClient, type ModelCheck } from '../llm/ollama';
+import { checkModels, LlmClient, type ModelCheck } from '../llm/ollama';
 import { replyToChat } from './chat-reply';
 import type { TaskContext } from './context';
-import { TaskCancelledError, TaskError } from './errors';
+import { errorMessage, TaskCancelledError, TaskError } from './errors';
 import { indexFile } from './index-file';
 
 const taskImplementations: { [T in TaskType]: (payload: TaskPayload<T>, context: TaskContext) => Promise<TaskResult<T>> } = {
@@ -30,9 +30,20 @@ export class TaskRunner {
     private readonly send: (message: AgentToServerMessage) => void,
   ) {}
 
-  /** Bascule sur un autre modèle de chat : les tâches suivantes l'utilisent. */
-  setCapabilities(capabilities: ModelCheck): void {
-    this.capabilities = capabilities;
+  /**
+   * Bascule sur un autre modèle de chat (demandé depuis l'app), vérifié avant d'être appliqué :
+   * les tâches suivantes l'utilisent, et il est annoncé au serveur à la prochaine connexion.
+   * Le résultat (ou la raison du refus) est renvoyé au serveur dans `config.applied`.
+   */
+  async switchChatModel(chatModel: string): Promise<void> {
+    try {
+      this.capabilities = await checkModels({ ...this.config, CHAT_MODEL: chatModel });
+      this.config.CHAT_MODEL = chatModel;
+      console.info(`[agent] modèle de chat : ${chatModel}`);
+      this.send({ type: 'config.applied', chatModel });
+    } catch (error) {
+      this.send({ type: 'config.applied', chatModel, error: errorMessage(error) });
+    }
   }
 
   get size(): number {
@@ -51,12 +62,13 @@ export class TaskRunner {
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         const retryable = error instanceof TaskError ? error.retryable : true;
-        const reason = error instanceof Error ? error.message : String(error);
+        const reason = errorMessage(error);
         console.error(`[agent] ${message.taskType} ${message.taskId} échouée : ${reason}`);
         this.send({ type: 'task.failed', taskId: message.taskId, error: reason, retryable });
       })
       .finally(() => {
-        this.running.delete(message.taskId);
+        // La tâche a pu être annulée puis réattribuée à cette machine : ne pas oublier la nouvelle exécution.
+        if (this.running.get(message.taskId) === controller) this.running.delete(message.taskId);
       });
   }
 

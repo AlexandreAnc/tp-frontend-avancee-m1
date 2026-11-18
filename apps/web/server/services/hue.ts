@@ -10,9 +10,13 @@ import { AppError } from '../utils/errors';
 
 const { connectors, connectorApps } = schema;
 
+/** Connexion Hue (tokens) et application Philips de l'utilisateur : une ligne au plus de chaque. */
+const ownHueConnector = (userId: string) => and(eq(connectors.userId, userId), eq(connectors.provider, 'hue'));
+const ownHueApp = (userId: string) => and(eq(connectorApps.userId, userId), eq(connectorApps.provider, 'hue'));
+
 /** Application Philips de l'utilisateur, sinon celle du serveur ; `null` si aucune n'est configurée. */
 export async function getHueApp(userId: string): Promise<HueApp | null> {
-  const [own] = await db.select().from(connectorApps).where(and(eq(connectorApps.userId, userId), eq(connectorApps.provider, 'hue')));
+  const [own] = await db.select().from(connectorApps).where(ownHueApp(userId));
   return own ? { clientId: own.clientId, clientSecret: decrypt(own.clientSecretEnc) } : serverHueApp();
 }
 
@@ -25,7 +29,7 @@ async function requireHueApp(userId: string): Promise<HueApp> {
 /** Configuration Hue affichée à l'utilisateur : jamais le secret. */
 export async function getHueAppSettings(userId: string) {
   const [own] = await db.select({ clientId: connectorApps.clientId }).from(connectorApps)
-    .where(and(eq(connectorApps.userId, userId), eq(connectorApps.provider, 'hue')));
+    .where(ownHueApp(userId));
   return {
     ownClientId: own?.clientId ?? null,
     serverApp: serverHueApp() !== null,
@@ -42,7 +46,7 @@ export async function saveHueApp(userId: string, clientId: string, clientSecret:
 }
 
 export async function deleteHueApp(userId: string): Promise<void> {
-  await db.delete(connectorApps).where(and(eq(connectorApps.userId, userId), eq(connectorApps.provider, 'hue')));
+  await db.delete(connectorApps).where(ownHueApp(userId));
   await disconnectHue(userId);
 }
 
@@ -66,7 +70,7 @@ export async function connectHue(userId: string, code: string): Promise<void> {
 }
 
 export async function getHueApi(userId: string): Promise<HueApi> {
-  const [row] = await db.select().from(connectors).where(and(eq(connectors.userId, userId), eq(connectors.provider, 'hue')));
+  const [row] = await db.select().from(connectors).where(ownHueConnector(userId));
   if (!row) throw new AppError('connector_missing', 'Connectez Philips Hue dans les réglages pour piloter vos lampes.');
   const applicationKey = row.metadata?.applicationKeyEnc ? decrypt(row.metadata.applicationKeyEnc) : null;
   return new HueApi(
@@ -79,12 +83,12 @@ export async function getHueApi(userId: string): Promise<HueApi> {
 
 /** État de la maison, ou maison vide si Hue n'est pas connecté. */
 export async function getHome(userId: string): Promise<HomeState> {
-  const [row] = await db.select({ id: connectors.id }).from(connectors).where(and(eq(connectors.userId, userId), eq(connectors.provider, 'hue')));
+  const [row] = await db.select({ id: connectors.id }).from(connectors).where(ownHueConnector(userId));
   if (!row) return { connected: false, rooms: [], scenes: [] };
   return await callMcpTool(createHueMcpServer(await getHueApi(userId)), 'get_home', {}) as HomeState;
 }
 
 export async function disconnectHue(userId: string): Promise<void> {
-  await db.delete(connectors).where(and(eq(connectors.userId, userId), eq(connectors.provider, 'hue')));
+  await db.delete(connectors).where(ownHueConnector(userId));
 }
 

@@ -18,6 +18,11 @@ describe('chiffrement des tokens OAuth', () => {
     expect(() => decrypt(altered)).toThrow();
     expect(data).toBeTruthy();
   });
+
+  it('refuse une valeur tronquée ou chiffrée avec une autre clé', () => {
+    expect(() => decrypt('abc')).toThrow('Valeur chiffrée invalide');
+    expect(() => decrypt(encrypt('secret', Buffer.alloc(32, 1).toString('base64')))).toThrow();
+  });
 });
 
 describe('tokens', () => {
@@ -31,6 +36,15 @@ describe('tokens', () => {
 });
 
 describe('createRateLimiter', () => {
+  it('oublie les fenêtres expirées quand beaucoup de clés se sont accumulées', () => {
+    const consume = createRateLimiter({ limit: 1, windowMs: 1000, message: 'Trop de requêtes' });
+    for (let index = 0; index <= 10_000; index++) consume(`ip-${index}`, 0);
+    expect(() => consume('ip-0', 500)).toThrow(AppError);
+    // Après la fenêtre, le nettoyage ne bloque pas les nouveaux venus et libère les anciens.
+    consume('nouveau', 2000);
+    consume('ip-0', 2000);
+  });
+
   it('bloque au-delà de la limite puis libère après la fenêtre', () => {
     const consume = createRateLimiter({ limit: 2, windowMs: 1000, message: 'Trop de requêtes' });
     consume('user', 0);

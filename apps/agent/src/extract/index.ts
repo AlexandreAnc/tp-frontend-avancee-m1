@@ -1,14 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { isAllowedMimeType, type AllowedMimeType } from '@app/shared';
 import type { LlmClient } from '../llm/ollama';
-import { TaskError } from '../tasks/errors';
+import { errorMessage, TaskError } from '../tasks/errors';
 import { extractDocx } from './docx';
 import { extractImage } from './image';
 import { extractPdf } from './pdf';
 import { extractPlainText } from './text';
 import { extractXlsx } from './xlsx';
 
-type Extractor = (buffer: Buffer, llm: LlmClient) => Promise<string> | string;
+type Extractor = (buffer: Buffer, llm: LlmClient, mimeType: AllowedMimeType) => Promise<string> | string;
 
 const extractors: Record<AllowedMimeType, Extractor> = {
   'application/pdf': extractPdf,
@@ -16,9 +16,9 @@ const extractors: Record<AllowedMimeType, Extractor> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': extractXlsx,
   'text/plain': extractPlainText,
   'text/markdown': extractPlainText,
-  'image/jpeg': (buffer, llm) => extractImage(buffer, 'image/jpeg', llm),
-  'image/png': (buffer, llm) => extractImage(buffer, 'image/png', llm),
-  'image/heic': (buffer, llm) => extractImage(buffer, 'image/heic', llm),
+  'image/jpeg': extractImage,
+  'image/png': extractImage,
+  'image/heic': extractImage,
 };
 
 /** Normalise les espaces sans casser les paragraphes (utilisés pour le découpage). */
@@ -37,9 +37,9 @@ export async function extractTextFromFile(path: string, mimeType: string, llm: L
   }
   const buffer = await readFile(path);
   try {
-    return normalizeText(await extractors[mimeType](buffer, llm));
+    return normalizeText(await extractors[mimeType](buffer, llm, mimeType));
   } catch (error) {
     if (error instanceof TaskError) throw error;
-    throw new TaskError(`Lecture du fichier impossible : ${error instanceof Error ? error.message : String(error)}`, false);
+    throw new TaskError(`Lecture du fichier impossible : ${errorMessage(error)}`, false);
   }
 }

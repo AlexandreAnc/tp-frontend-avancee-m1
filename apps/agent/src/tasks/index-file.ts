@@ -8,7 +8,7 @@ import { extractTextFromFile } from '../extract';
 import { ANALYSIS_SYSTEM_PROMPT } from '../loop/prompts';
 import type { LlmClient } from '../llm/ollama';
 import type { TaskContext } from './context';
-import { TaskError } from './errors';
+import { errorMessage, TaskError } from './errors';
 
 /** Extrait du document transmis au modèle pour l'analyse (début du document). */
 const ANALYSIS_INPUT_CHARS = 16_000;
@@ -43,7 +43,7 @@ export async function analyzeDocument(llm: LlmClient, fileName: string, text: st
     try {
       return fileAnalysisSchema.parse(JSON.parse(message.content));
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      lastError = errorMessage(error);
     }
   }
   throw new TaskError(`Analyse du document invalide : ${lastError}`, true);

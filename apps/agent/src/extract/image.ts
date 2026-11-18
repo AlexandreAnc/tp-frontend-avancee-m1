@@ -16,7 +16,7 @@ async function toSupportedImage(buffer: Buffer, mimeType: string): Promise<Buffe
 }
 
 /** Texte d'une image, obtenu par le modèle vision de l'agent (OCR et description). */
-export async function extractImage(buffer: Buffer, mimeType: string, llm: LlmClient): Promise<string> {
+export async function extractImage(buffer: Buffer, llm: LlmClient, mimeType: string): Promise<string> {
   if (!llm.supportsVision) {
     throw new TaskError(`Le modèle ${llm.chatModel} ne lit pas les images : choisissez un modèle « vision » pour l'agent`, false);
   }

@@ -1,22 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { HueApi, toHueState } from '../../server/connectors/hue/api';
-import { buildHomeState, type HueResources } from '../../server/connectors/hue/resources';
+import { exchangeHueCode, getHueAuthorizationUrl, HueApi, toHueState } from '../../server/connectors/hue/api';
+import { buildHomeState } from '../../server/connectors/hue/resources';
+import { hueResources as resources } from '../fixtures/hue';
 
-const resources: HueResources = {
-  room: [{ id: 'room-salon', metadata: { name: 'Salon', archetype: 'living_room' }, children: [{ rid: 'dev-1', rtype: 'device' }, { rid: 'dev-2', rtype: 'device' }], services: [{ rid: 'gl-salon', rtype: 'grouped_light' }] }],
-  zone: [{ id: 'zone-bas', metadata: { name: 'Rez-de-chaussée' }, children: [{ rid: 'light-1', rtype: 'light' }], services: [{ rid: 'gl-bas', rtype: 'grouped_light' }] }],
-  device: [
-    { id: 'dev-1', metadata: { name: 'Lampadaire' }, services: [{ rid: 'light-1', rtype: 'light' }] },
-    { id: 'dev-2', metadata: { name: 'Plafonnier' }, services: [{ rid: 'light-2', rtype: 'light' }] },
-  ],
-  light: [
-    { id: 'light-1', owner: { rid: 'dev-1', rtype: 'device' }, metadata: { name: 'Lampadaire' }, on: { on: true }, dimming: { brightness: 69.8 } },
-    { id: 'light-2', owner: { rid: 'dev-2', rtype: 'device' }, on: { on: false } },
-  ],
-  grouped_light: [{ id: 'gl-salon', on: { on: true }, dimming: { brightness: 70.2 } }, { id: 'gl-bas', on: { on: true } }],
-  scene: [{ id: 'scene-lecture', metadata: { name: 'Lecture' }, group: { rid: 'room-salon', rtype: 'room' } }],
-  zigbee_connectivity: [{ id: 'z-2', owner: { rid: 'dev-2', rtype: 'device' }, status: 'connectivity_issue' }],
-};
 
 describe('buildHomeState', () => {
   it('regroupe les lampes par pièce et expose le groupe de lumières à piloter', () => {
@@ -73,5 +59,31 @@ describe('HueApi', () => {
     const api = new HueApi(APP, { accessToken: 'token-1', refreshToken: 'refresh-1', expiresAt: new Date(Date.now() + 1000) }, 'k', async (tokens) => void saved.push(tokens));
     await api.recallScene('scene-lecture');
     expect(saved).toEqual([expect.objectContaining({ accessToken: 'token-2', refreshToken: 'refresh-1' })]);
+  });
+
+  it("construit l'URL de consentement Philips avec le state anti-CSRF", () => {
+    const url = new URL(getHueAuthorizationUrl(APP, 'state-1'));
+    expect(url.origin + url.pathname).toBe('https://api.meethue.com/v2/oauth2/authorize');
+    expect(Object.fromEntries(url.searchParams)).toEqual({ client_id: 'hue-client', response_type: 'code', state: 'state-1' });
+  });
+
+  it('distingue une connexion expirée (à refaire) d’un pont injoignable', async () => {
+    const api = new HueApi(APP, { accessToken: 't', refreshToken: null, expiresAt: null }, 'k', async () => {});
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })));
+    await expect(api.setLight('light-1', { on: true })).rejects.toMatchObject({ code: 'connector_missing' });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 503 })));
+    await expect(api.setLight('light-1', { on: true })).rejects.toMatchObject({ code: 'upstream', message: expect.stringContaining('503') });
+  });
+
+  it("signale un appairage refusé par le pont et un OAuth refusé", async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: URL) => new Response(
+      JSON.stringify(String(url).endsWith('/route/api') ? [{ error: { description: 'link button not pressed' } }] : [{ success: {} }]),
+      { status: 200 },
+    )));
+    const api = new HueApi(APP, { accessToken: 't', refreshToken: null, expiresAt: null }, null, async () => {});
+    await expect(api.linkApplication()).rejects.toMatchObject({ code: 'upstream', message: expect.stringContaining('link button not pressed') });
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 400 })));
+    await expect(exchangeHueCode(APP, 'code')).rejects.toMatchObject({ code: 'upstream' });
   });
 });

@@ -19,7 +19,7 @@ export default defineConfig({
       include: ['server/services/**/*.ts', 'server/utils/**/*.ts', 'server/connectors/**/*.ts', 'utils/**/*.ts'],
       reporter: ['text-summary', 'html'],
       // Cliquet : la CI échoue si la couverture baisse. On relève ces seuils quand on ajoute des tests.
-      thresholds: { statements: 63, branches: 51, functions: 58, lines: 66 },
+      thresholds: { statements: 95, branches: 85, functions: 96, lines: 97 },
     },
   },
 });

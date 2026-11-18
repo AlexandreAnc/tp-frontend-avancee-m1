@@ -26,18 +26,21 @@ export type ReminderPayload = z.infer<typeof reminderPayloadSchema>;
 
 const brightness = z.number().int().min(1).max(100);
 
+/** Une commande de lumière doit changer quelque chose : l'état, la luminosité, ou les deux. */
+const lightCommand = { on: z.boolean().optional(), brightness: brightness.optional() };
+const hasLightChange = (payload: { on?: boolean; brightness?: number }) => payload.on !== undefined || payload.brightness !== undefined;
+const LIGHT_CHANGE_REQUIRED = { message: 'Indiquez on ou brightness' };
+
 /** Pièce (ou toute la maison avec `all`) : allumer / éteindre / luminosité en %. */
 export const hueRoomPayloadSchema = z.object({
   roomId: z.union([z.literal('all'), z.string().min(1)]),
-  on: z.boolean().optional(),
-  brightness: brightness.optional(),
-}).refine((payload) => payload.on !== undefined || payload.brightness !== undefined, { message: 'Indiquez on ou brightness' });
+  ...lightCommand,
+}).refine(hasLightChange, LIGHT_CHANGE_REQUIRED);
 
 export const hueLightPayloadSchema = z.object({
   lightId: z.string().min(1),
-  on: z.boolean().optional(),
-  brightness: brightness.optional(),
-}).refine((payload) => payload.on !== undefined || payload.brightness !== undefined, { message: 'Indiquez on ou brightness' });
+  ...lightCommand,
+}).refine(hasLightChange, LIGHT_CHANGE_REQUIRED);
 
 export const hueScenePayloadSchema = z.object({ sceneId: z.string().min(1) });
 

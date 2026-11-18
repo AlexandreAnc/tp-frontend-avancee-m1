@@ -8,6 +8,9 @@ import { getHueApp } from './hue';
 
 const { connectors } = schema;
 
+const ownConnector = (userId: string, provider: ConnectorProvider) =>
+  and(eq(connectors.userId, userId), eq(connectors.provider, provider));
+
 export async function listConnectors(userId: string) {
   const rows = await db.select().from(connectors).where(eq(connectors.userId, userId));
   const entry = (provider: ConnectorProvider, label: string, available: boolean) => {
@@ -19,7 +22,7 @@ export async function listConnectors(userId: string) {
 
 export async function hasConnector(userId: string, provider: ConnectorProvider): Promise<boolean> {
   const [row] = await db.select({ id: connectors.id }).from(connectors)
-    .where(and(eq(connectors.userId, userId), eq(connectors.provider, provider)));
+    .where(ownConnector(userId, provider));
   return Boolean(row);
 }
 
@@ -53,7 +56,7 @@ async function saveGoogleTokens(userId: string, tokens: GoogleTokens): Promise<v
 /** Client OAuth Google de l'utilisateur. Les tokens rafraîchis sont réenregistrés chiffrés. */
 export async function getGoogleClient(userId: string): Promise<GoogleOAuthClient> {
   const [row] = await db.select().from(connectors)
-    .where(and(eq(connectors.userId, userId), eq(connectors.provider, 'google')));
+    .where(ownConnector(userId, 'google'));
   if (!row) throw new AppError('connector_missing', "Connectez Google Agenda dans les réglages pour valider cette action");
 
   const client = createOAuthClient();
@@ -70,7 +73,7 @@ export async function getGoogleClient(userId: string): Promise<GoogleOAuthClient
 
 export async function disconnectGoogle(userId: string): Promise<void> {
   const [row] = await db.delete(connectors)
-    .where(and(eq(connectors.userId, userId), eq(connectors.provider, 'google')))
+    .where(ownConnector(userId, 'google'))
     .returning();
   if (!row || !isGoogleConfigured()) return;
   try {
