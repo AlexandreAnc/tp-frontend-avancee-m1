@@ -129,6 +129,13 @@ test.describe('manifeste', () => {
 });
 
 test.describe('service worker', () => {
+  test('le service worker et le manifeste ne sont jamais servis depuis un cache', async ({ request }) => {
+    // Sinon un cache intermédiaire (Cloudflare) sert l'ancien service worker après un déploiement, et son installation échoue.
+    for (const path of ['/sw.js', '/manifest.webmanifest']) {
+      expect((await request.get(path)).headers()['cache-control'], path).toBe('no-cache');
+    }
+  });
+
   test('s’enregistre, s’active, contrôle la page et sert l’app depuis le précache', async ({ page }) => {
     await page.goto('/login');
     await waitForServiceWorker(page);

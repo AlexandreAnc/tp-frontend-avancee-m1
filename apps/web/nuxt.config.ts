@@ -32,6 +32,11 @@ export default defineNuxtConfig({
         'referrer-policy': 'strict-origin-when-cross-origin',
       },
     },
+    // Service worker et manifeste : jamais gardés en cache (ni par le navigateur, ni par Cloudflare). Sans en-tête,
+    // Cloudflare les garde 4 h : après un déploiement, il servait l'ancien service worker, dont le précache réclame
+    // des fichiers supprimés, et son installation échouait.
+    '/sw.js': { headers: { 'cache-control': 'no-cache' } },
+    '/manifest.webmanifest': { headers: { 'cache-control': 'no-cache' } },
     // Article inconnu : rendu serveur, donc une vraie 404 pour les moteurs (pas une SPA en 200).
     '/blog/**': { ssr: true },
     ...Object.fromEntries(MARKETING_ROUTES.map((route) => [route, { ssr: true, prerender: true, noScripts: true }])),
