@@ -359,6 +359,11 @@ const THEMES: { value: ThemePreference; label: string; icon: 'sun-outline' | 'mo
         </div>
       </section>
 
+      <SettingsGroup title="Application">
+        <InstallAppRow />
+        <SettingsRow icon="wifi" tone="tone-info" title="Hors ligne" subtitle="Historique consultable, messages envoyés au retour du réseau" />
+      </SettingsGroup>
+
       <section class="flex flex-col gap-3">
         <h2 class="section-label">Apparence</h2>
         <div class="segmented">

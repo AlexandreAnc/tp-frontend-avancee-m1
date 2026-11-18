@@ -5,6 +5,7 @@ const { online, agent } = useAgentStatus();
 const { signOut } = useAuth();
 const serverUnreachable = useServerUnreachable();
 const pendingActions = usePendingActions();
+const outbox = useOutbox();
 const isOffline = ref(false);
 
 useEvents((event) => {
@@ -14,9 +15,19 @@ useEvents((event) => {
 
 function updateOnline() {
   isOffline.value = !navigator.onLine;
+  // Retour du réseau : les messages écrits hors ligne partent.
+  if (!isOffline.value) void outbox.flush();
 }
 
+/** La file d'envoi est propre à chaque compte : rechargée dès que l'utilisateur est connu. */
+watch(() => me.value?.user.id, () => {
+  outbox.load();
+  void outbox.flush();
+});
+
 onMounted(() => {
+  outbox.load();
+  // En ligne : envoie aussi ce qui attendait depuis la dernière ouverture.
   updateOnline();
   window.addEventListener('online', updateOnline);
   window.addEventListener('offline', updateOnline);

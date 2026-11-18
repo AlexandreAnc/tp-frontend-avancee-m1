@@ -17,6 +17,9 @@ const draft = ref(typeof route.query.prompt === 'string' ? route.query.prompt : 
 const error = ref<string | null>(null);
 const sending = ref(false);
 const scroller = ref<HTMLElement | null>(null);
+const outbox = useOutbox();
+/** Messages écrits hors ligne pour cette discussion, pas encore envoyés. */
+const queued = computed(() => outbox.entries.value.filter((entry) => entry.conversationId === props.conversationId));
 
 async function load() {
   if (!props.conversationId) {
@@ -39,6 +42,10 @@ async function load() {
 
 await load();
 watch(() => props.conversationId, load);
+// Un message de la file vient de partir : on recharge la discussion (le flux d'événements a pu manquer sa création).
+watch(() => queued.value.length, (count, previous) => {
+  if (count < previous) void load();
+});
 
 useHead(() => ({ title: `${conversation.value?.title ?? 'Discussions'} · DashIA` }));
 
@@ -95,8 +102,17 @@ useEvents((event) => {
   void scrollToBottom();
 });
 
+function queue(content: string) {
+  outbox.enqueue(props.conversationId, content);
+  void scrollToBottom();
+}
+
 async function send(content: string) {
   error.value = null;
+  if (!navigator.onLine) {
+    queue(content);
+    return;
+  }
   sending.value = true;
   try {
     if (!props.conversationId) {
@@ -109,7 +125,9 @@ async function send(content: string) {
     if (!messages.value.some((candidate) => candidate.id === message.id)) messages.value.push(message);
     void scrollToBottom();
   } catch (caught) {
-    error.value = getErrorMessage(caught);
+    // Coupure pendant l'envoi : le message rejoint la file plutôt que d'être perdu.
+    if (isNetworkError(caught)) queue(content);
+    else error.value = getErrorMessage(caught);
   } finally {
     sending.value = false;
   }
@@ -181,6 +199,15 @@ const SUGGESTIONS = ['Mon résumé du jour', 'Quelles sont mes prochaines éché
             </template>
           </ChatMessage>
         </template>
+
+        <div v-for="entry in queued" :key="entry.id" class="ml-[15%] flex flex-col items-end gap-1" data-testid="outbox-message">
+          <div class="rounded-lg px-4 py-3 whitespace-pre-wrap [word-break:break-word]" :class="entry.error ? 'bg-danger-soft text-text' : 'bg-ink/65 text-on-ink'">{{ entry.content }}</div>
+          <div class="flex items-center gap-1.5 text-2xs font-extrabold text-muted">
+            <span v-if="entry.error" class="inline-flex items-center gap-1 text-danger"><AppIcon name="circle-exclamation" :size="11" />Non envoyé · {{ entry.error }}</span>
+            <span v-else class="inline-flex items-center gap-1"><AppIcon name="clock" :size="10" />En attente d’envoi</span>
+            <button class="text-btn text-2xs" type="button" @click="outbox.remove(entry.id)">{{ entry.error ? 'Retirer' : 'Annuler' }}</button>
+          </div>
+        </div>
 
         <div v-if="typing" class="mr-[8%] flex items-start gap-2.5">
           <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-sm bg-ink text-on-ink"><AppIcon name="microchip" :size="14" /></span>

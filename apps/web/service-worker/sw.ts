@@ -4,23 +4,53 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
+import { filesFromShare, SHARE_TARGET_PATH, SHARED_FILES_CACHE, SHARED_FILES_PAGE, storeSharedFiles } from '../utils/shared-files';
 
 declare let self: ServiceWorkerGlobalScope;
 
 /** Caches contenant des données de l'utilisateur : vidés à la déconnexion (message `clear-user-cache`). */
-const USER_CACHES = ['api-history'];
+const USER_CACHES = ['api-history', SHARED_FILES_CACHE];
+/** Page de démarrage (`start_url`) : son HTML, identique pour toutes les pages de l'app (SPA), sert de shell hors ligne. */
+const APP_SHELL_URL = '/panel';
+const PAGES_CACHE = 'pages';
 
-// ── Cache de l'app ──────────────────────────────────────────────
+/** Seules les réponses complètes sont gardées (pas une erreur 500, ni une redirection opaque). */
+const onlyOk = { cacheWillUpdate: async ({ response }: { response: Response }) => (response.status === 200 ? response : null) };
+
+// ── Cache de l'app et mises à jour ──────────────────────────────
 
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
-self.skipWaiting();
 clientsClaim();
 
-// Shell de l'app (SPA) : réseau d'abord, dernière version en cache hors ligne.
+// Pas de `skipWaiting()` d'office : une nouvelle version attend que l'utilisateur clique « Recharger »
+// (message envoyé par `updateServiceWorker()`), pour ne pas changer de version au milieu d'une saisie.
+// La toute première installation, elle, s'active tout de suite (aucune version à remplacer).
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting();
+  if (event.data?.type === 'clear-user-cache') {
+    event.waitUntil(Promise.all(USER_CACHES.map((name) => caches.delete(name))));
+  }
+});
+
+// Le shell est mis en cache dès l'activation : l'app s'ouvre hors ligne même sur une page jamais visitée.
+self.addEventListener('activate', (event) => {
+  event.waitUntil(caches.open(PAGES_CACHE).then((cache) => cache.add(APP_SHELL_URL)).catch(() => undefined));
+});
+
+// Shell de l'app (SPA) : réseau d'abord, dernière version en cache hors ligne, sinon le shell de démarrage.
+const pages = new NetworkFirst({ cacheName: PAGES_CACHE, networkTimeoutSeconds: 3, plugins: [onlyOk] });
 registerRoute(
-  ({ request }) => request.mode === 'navigate',
-  new NetworkFirst({ cacheName: 'pages', networkTimeoutSeconds: 3 }),
+  ({ request, url }) => request.mode === 'navigate' && !url.pathname.startsWith('/api/'),
+  async (options) => {
+    try {
+      return await pages.handle(options);
+    } catch (error) {
+      const shell = await caches.match(APP_SHELL_URL, { cacheName: PAGES_CACHE });
+      if (shell) return shell;
+      throw error;
+    }
+  },
 );
 
 // ── Historique hors ligne ───────────────────────────────────────
@@ -29,6 +59,8 @@ const OFFLINE_API_PATHS = [
   /^\/api\/me$/,
   /^\/api\/conversations(\/[\w-]+)?$/,
   /^\/api\/files$/,
+  /^\/api\/drive$/,
+  /^\/api\/settings$/,
   /^\/api\/actions(\/[\w-]+)?$/,
 ];
 
@@ -39,15 +71,24 @@ registerRoute(
   new NetworkFirst({
     cacheName: 'api-history',
     networkTimeoutSeconds: 4,
-    plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+    plugins: [onlyOk, new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],
   }),
 );
 
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'clear-user-cache') {
-    event.waitUntil(Promise.all(USER_CACHES.map((name) => caches.delete(name))));
-  }
-});
+// ── Partage vers DashIA (Web Share Target) ──────────────────────
+
+// Le formulaire de partage du téléphone arrive ici (POST multipart) : les fichiers sont gardés,
+// puis le drive les dépose par le flux habituel (session, limites et type vérifiés par le serveur).
+// Sans session, la page de connexion ramène au drive, qui les reprend alors.
+registerRoute(
+  ({ url }) => url.origin === self.location.origin && url.pathname === SHARE_TARGET_PATH,
+  async ({ request }) => {
+    const files = filesFromShare(await request.formData());
+    await storeSharedFiles(await caches.open(SHARED_FILES_CACHE), files);
+    return Response.redirect(new URL(SHARED_FILES_PAGE, self.location.origin).href, 303);
+  },
+  'POST',
+);
 
 // ── Notifications push ──────────────────────────────────────────
 

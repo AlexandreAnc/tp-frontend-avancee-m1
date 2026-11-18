@@ -49,6 +49,23 @@ const selectedId = ref<string | null>(null);
 const previewId = ref<string | null>(typeof route.query.preview === 'string' ? route.query.preview : null);
 const busySuggestion = ref<string | null>(null);
 const ignored = useIgnoredSuggestions();
+const uploader = ref<{ upload(files: File[]): Promise<void> } | null>(null);
+
+/**
+ * Fichiers partagés vers DashIA (`?partage=1`, posé par le service worker ou le plugin `launch-queue`) :
+ * repris de la file de l'appareil et déposés comme un dépôt normal. Hors ligne, ils attendent le prochain passage.
+ */
+async function importSharedFiles() {
+  if (route.query.partage === undefined || !('caches' in window) || !navigator.onLine) return;
+  await router.replace({ query: { ...route.query, partage: undefined } });
+  const shared = await takeSharedFiles(await caches.open(SHARED_FILES_CACHE));
+  if (!shared.length) return;
+  await nextTick();
+  await uploader.value?.upload(shared);
+}
+
+onMounted(importSharedFiles);
+watch(() => route.query.partage, importSharedFiles);
 
 useEvents((event) => {
   if (event.type === 'file.updated' || event.type === 'file.deleted' || event.type === 'drive.changed') void refresh();
@@ -548,6 +565,7 @@ const CHECKED_LINE = '[&_article]:border-info [&_article]:bg-[color-mix(in_srgb,
 
         <FileUploader
           v-if="view === 'folder' && !searching"
+          ref="uploader"
           :used-bytes="quota.usedBytes"
           :max-bytes="quota.maxBytes"
           :folder-id="folderId"
