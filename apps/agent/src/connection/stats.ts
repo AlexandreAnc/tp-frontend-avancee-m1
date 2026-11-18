@@ -14,12 +14,19 @@ function cpuTimes() {
 
 const round = (value: number) => Math.round(Math.min(100, Math.max(0, value)));
 
+/** Occupation de la VRAM du premier GPU, d'après la sortie `used, total` de `nvidia-smi`. `null` si illisible. */
+export function parseVramUsage(stdout: string): number | null {
+  const match = /^\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)/.exec(stdout);
+  if (!match) return null;
+  const total = Number(match[2]);
+  return total > 0 ? round((Number(match[1]) / total) * 100) : null;
+}
+
 /** VRAM utilisée (GPU NVIDIA). `null` quand elle n'est pas mesurable (Apple Silicon : mémoire unifiée). */
 async function vramUsage(): Promise<number | null> {
   try {
     const { stdout } = await run('nvidia-smi', ['--query-gpu=memory.used,memory.total', '--format=csv,noheader,nounits'], { timeout: 2000 });
-    const [used, total] = stdout.trim().split('\n')[0]!.split(',').map(Number);
-    return used !== undefined && total ? round((used / total) * 100) : null;
+    return parseVramUsage(stdout);
   } catch {
     return null;
   }

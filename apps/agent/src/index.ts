@@ -14,7 +14,7 @@ const connection: ServerConnection = new ServerConnection(config, {
   onMessage: (message) => {
     if (message.type === 'task.assign') runner.run(message);
     else if (message.type === 'task.cancel') runner.cancel(message.taskId);
-    else void switchChatModel(message.chatModel);
+    else void runner.switchChatModel(message.chatModel);
   },
   listModels: () => listInstalledModels(config.OLLAMA_URL),
   onDisconnect: () => runner.cancelAll(),
@@ -22,18 +22,6 @@ const connection: ServerConnection = new ServerConnection(config, {
     process.exitCode = 1;
   },
 });
-
-/** Changement de modèle demandé depuis l'app : vérifié avant d'être appliqué. */
-async function switchChatModel(chatModel: string) {
-  try {
-    runner.setCapabilities(await checkModels({ ...config, CHAT_MODEL: chatModel }));
-    config.CHAT_MODEL = chatModel;
-    console.info(`[agent] modèle de chat : ${chatModel}`);
-    connection.send({ type: 'config.applied', chatModel });
-  } catch (error) {
-    connection.send({ type: 'config.applied', chatModel, error: error instanceof Error ? error.message : String(error) });
-  }
-}
 
 connection.start();
 

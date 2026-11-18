@@ -171,6 +171,42 @@ describe('runOrchestrator', () => {
     expect(steps).toContainEqual(expect.objectContaining({ kind: 'delegation_result', specialist: 'planning', answer: 'ok' }));
   });
 
+  it('renvoie au modèle une délégation sans consigne', async () => {
+    const { run, steps, calls } = setup({
+      orchestrator: [{ tool_calls: [call('ask_documents', {})] }, { content: 'Précisez.' }],
+    });
+    await expect(run()).resolves.toBe('Précisez.');
+    expect(steps).toEqual([expect.objectContaining({ kind: 'tool_result', tool: 'ask_documents', error: expect.stringContaining('Arguments invalides') })]);
+    expect(calls.every((entry) => entry.role === 'orchestrator')).toBe(true);
+  });
+
+  it('rend au modèle l’échec non fatal d’un spécialiste', async () => {
+    const { llm, calls } = scriptedLlm({
+      orchestrator: [{ tool_calls: [call('ask_home', { task: 'Éteins le salon' })] }, { content: 'La maison est injoignable.' }],
+    });
+    type Request = { messages: { content: string }[] };
+    const chat = vi.mocked(llm.chat as unknown as (request: Request) => Promise<unknown>);
+    const scripted = chat.getMockImplementation()!;
+    chat.mockImplementation(async (request) => {
+      if (request.messages[0]!.content.includes('spécialiste Maison')) throw new TaskError('Hue ne répond pas', true, false);
+      return scripted(request);
+    });
+    const { steps, emitStep } = collect();
+    const answer = await runOrchestrator({ history: [{ role: 'user', content: 'Éteins le salon' }], context: fakeContext({}, llm), emitStep, signal: new AbortController().signal });
+
+    expect(answer).toBe('La maison est injoignable.');
+    expect(steps).toContainEqual(expect.objectContaining({ kind: 'delegation_result', specialist: 'home', error: 'Hue ne répond pas' }));
+    expect(calls.at(-1)!.messages.at(-1)).toEqual({ role: 'tool', tool_name: 'ask_home', content: JSON.stringify({ specialist: 'home', error: 'Hue ne répond pas' }) });
+  });
+
+  it('s’arrête avant d’appeler le modèle si la tâche est annulée', async () => {
+    const { llm, calls } = scriptedLlm({ orchestrator: [{ content: 'jamais' }] });
+    const controller = new AbortController();
+    controller.abort(new Error('annulée'));
+    await expect(runOrchestrator({ history: [], context: fakeContext({}, llm), emitStep: async () => {}, signal: controller.signal })).rejects.toThrow('annulée');
+    expect(calls).toEqual([]);
+  });
+
   it("borne le nombre de tours de délégation", async () => {
     const replies = Array.from({ length: MAX_ORCHESTRATOR_ITERATIONS }, () => ({ tool_calls: [call('ask_home', { task: 'état ?' })] }));
     const { run, calls } = setup({

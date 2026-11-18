@@ -1,7 +1,7 @@
 import { EMBEDDING_DIMENSIONS } from '@app/shared';
 import { Ollama, type ChatRequest } from 'ollama';
 import type { AgentConfig } from '../config';
-import { TaskError } from '../tasks/errors';
+import { errorMessage, TaskError } from '../tasks/errors';
 import type { ChatBackend, ChatMessage } from './chat-backend';
 
 const EMBED_BATCH_SIZE = 16;
@@ -58,7 +58,10 @@ export class LlmClient {
       };
       const response = await this.ollama.chat({ ...request, options, model: this.config.CHAT_MODEL, stream: false });
       // Réponse coupée par la limite : le modèle a bouclé. Une réponse tronquée ne vaut rien, on échoue tout de suite.
-      if (response.done_reason === 'length') throw new Error(`réponse du modèle interrompue après ${this.config.CHAT_MAX_TOKENS} tokens (le modèle a bouclé)`);
+      if (response.done_reason === 'length') {
+        const limit = this.config.CHAT_MAX_TOKENS ? `après ${this.config.CHAT_MAX_TOKENS} tokens` : 'par la fenêtre de contexte';
+        throw new Error(`réponse du modèle interrompue ${limit} (le modèle a bouclé)`);
+      }
       return response;
     } catch (error) {
       throw this.wrap(error);
@@ -86,7 +89,7 @@ export class LlmClient {
 
   private wrap(error: unknown): unknown {
     if (this.signal.aborted) return error;
-    return new TaskError(`Ollama : ${error instanceof Error ? error.message : String(error)}`, true);
+    return new TaskError(`Ollama : ${errorMessage(error)}`, true);
   }
 }
 

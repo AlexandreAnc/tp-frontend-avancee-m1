@@ -9,7 +9,7 @@ export default defineConfig({
       exclude: ['src/index.ts'],
       reporter: ['text-summary', 'html'],
       // Cliquet : la CI échoue si la couverture baisse. On relève ces seuils quand on ajoute des tests.
-      thresholds: { statements: 50, branches: 45, functions: 44, lines: 50 },
+      thresholds: { statements: 99, branches: 95, functions: 99, lines: 99 },
     },
   },
 });

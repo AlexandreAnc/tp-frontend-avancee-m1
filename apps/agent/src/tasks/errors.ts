@@ -15,3 +15,8 @@ export class TaskCancelledError extends Error {
     this.name = 'TaskCancelledError';
   }
 }
+
+/** Message d'une erreur quelconque (une bibliothèque peut rejeter autre chose qu'une `Error`). */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

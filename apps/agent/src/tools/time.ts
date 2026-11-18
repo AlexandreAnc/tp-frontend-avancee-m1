@@ -26,3 +26,8 @@ export function localToZonedIso(local: string, timezone: string): string {
   offset = offsetMinutesAt(new Date(asUtc.getTime() - offset * 60_000), timezone);
   return `${datePart}T${time}${formatOffset(offset)}`;
 }
+
+/** Date et heure lisibles en français dans le fuseau de l'utilisateur (« samedi 14 novembre 2026 à 09:00 »). */
+export function formatDateTime(instant: Date | string, timezone: string): string {
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short', timeZone: timezone }).format(new Date(instant));
+}

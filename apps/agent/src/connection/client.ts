@@ -71,16 +71,20 @@ export class ServerConnection {
     this.socket = socket;
 
     socket.addEventListener('open', () => {
-      void this.handlers.listModels().catch(() => []).then((models) => this.send({
-        type: 'hello',
-        protocolVersion: PROTOCOL_VERSION,
-        agentKey: this.config.AGENT_KEY,
-        name: this.config.AGENT_NAME,
-        chatModel: this.config.CHAT_MODEL,
-        embedModel: this.config.EMBED_MODEL,
-        concurrency: this.config.AGENT_CONCURRENCY,
-        models,
-      }));
+      void this.handlers.listModels().catch(() => []).then((models) => {
+        // Connexion coupée (et peut-être remplacée) pendant la lecture des modèles : la nouvelle enverra son propre `hello`.
+        if (this.socket !== socket) return;
+        this.send({
+          type: 'hello',
+          protocolVersion: PROTOCOL_VERSION,
+          agentKey: this.config.AGENT_KEY,
+          name: this.config.AGENT_NAME,
+          chatModel: this.config.CHAT_MODEL,
+          embedModel: this.config.EMBED_MODEL,
+          concurrency: this.config.AGENT_CONCURRENCY,
+          models,
+        });
+      });
     });
 
     socket.addEventListener('message', (event) => {

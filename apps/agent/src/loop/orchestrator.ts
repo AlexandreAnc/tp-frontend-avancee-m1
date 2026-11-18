@@ -50,13 +50,14 @@ export async function runOrchestrator({ history, context, emitStep, signal, now 
     emitStep,
     signal,
     runCall: async ({ name, args, callId }, emit) => {
-      const specialist = specialistForDelegationTool(name);
-      const input = delegationInputSchema.safeParse(args);
-      if (!specialist || !input.success) {
-        const error = specialist ? `Arguments invalides : ${z.prettifyError(input.error!)}` : `Outil inconnu : ${name}`;
+      const rejectCall = async (error: string) => {
         await emit({ kind: 'tool_result', tool: name, error, callId });
         return serializeForModel({ error });
-      }
+      };
+      const specialist = specialistForDelegationTool(name);
+      if (!specialist) return rejectCall(`Outil inconnu : ${name}`);
+      const input = delegationInputSchema.safeParse(args);
+      if (!input.success) return rejectCall(`Arguments invalides : ${z.prettifyError(input.error)}`);
 
       await emit({ kind: 'delegation', specialist, task: input.data.task, callId });
       try {

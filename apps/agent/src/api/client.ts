@@ -17,7 +17,7 @@ import {
   type ProposedAction,
 } from '@app/shared';
 import type { z } from 'zod';
-import { TaskError } from '../tasks/errors';
+import { errorMessage, TaskError } from '../tasks/errors';
 
 /** Statuts pour lesquels réessayer ne changerait rien (token expiré, fichier supprimé, données refusées). */
 const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 409, 410, 413, 415, 422]);
@@ -47,7 +47,7 @@ export class ApiClient {
       });
     } catch (error) {
       if (this.signal.aborted) throw error;
-      throw new TaskError(`Serveur injoignable : ${error instanceof Error ? error.message : String(error)}`, true);
+      throw new TaskError(`Serveur injoignable : ${errorMessage(error)}`, true);
     }
     if (!response.ok) {
       const body = await response.json().catch(() => null) as { message?: string } | null;
