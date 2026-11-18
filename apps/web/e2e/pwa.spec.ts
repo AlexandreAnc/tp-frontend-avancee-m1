@@ -132,7 +132,15 @@ test.describe('service worker', () => {
   test('le service worker et le manifeste ne sont jamais servis depuis un cache', async ({ request }) => {
     // Sinon un cache intermédiaire (Cloudflare) sert l'ancien service worker après un déploiement, et son installation échoue.
     for (const path of ['/sw.js', '/manifest.webmanifest']) {
-      expect((await request.get(path)).headers()['cache-control'], path).toBe('no-cache');
+      const headers = (await request.get(path)).headers();
+      if (headers['cf-cache-status']) {
+        // Derrière Cloudflare, l'en-tête vu par le navigateur est réécrit par le réglage « Browser Cache TTL » de la zone
+        // (sans effet sur `sw.js` : le navigateur le revérifie toujours). Ce qui compte : jamais une copie servie par le cache
+        // de Cloudflare sans demander au serveur (HIT, STALE…), seulement REVALIDATED, EXPIRED, MISS ou DYNAMIC.
+        expect(['REVALIDATED', 'EXPIRED', 'MISS', 'DYNAMIC', 'BYPASS'], path).toContain(headers['cf-cache-status']);
+      } else {
+        expect(headers['cache-control'], path).toBe('no-cache');
+      }
     }
   });
 
