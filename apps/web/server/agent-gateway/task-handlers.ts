@@ -1,6 +1,6 @@
 import type { AgentStep, TaskPayload, TaskResult, TaskType } from '@app/shared';
 import { AppError } from '../utils/errors';
-import { appendStep, clearSteps, conversationExists, saveAssistantReply, setMessageStatus } from '../services/conversations';
+import { appendStep, clearSteps, conversationExists, publishDraft, saveAssistantReply, setMessageStatus } from '../services/conversations';
 import { getFile, setFileStatus } from '../services/files';
 import type { TaskSubject } from '../services/tasks';
 
@@ -9,6 +9,8 @@ export interface TaskHandler<T extends TaskType> {
   /** Prépare l'attribution. `null` : l'objet de la tâche a été supprimé, la tâche est abandonnée. */
   prepare(userId: string, payload: TaskPayload<T>): Promise<{ conversationId: string | null } | null>;
   onStep(userId: string, payload: TaskPayload<T>, position: number, step: AgentStep): Promise<void>;
+  /** Brouillon de la réponse en cours d'écriture (`task.draft`), relayé au navigateur sans être enregistré. */
+  onDraft(userId: string, payload: TaskPayload<T>, text: string): void;
   onComplete(userId: string, payload: TaskPayload<T>, result: TaskResult<T>): Promise<void>;
   /** `final` : plus aucune nouvelle tentative ne sera faite. */
   onFail(userId: string, payload: TaskPayload<T>, error: string, final: boolean): Promise<void>;
@@ -29,6 +31,7 @@ const fileIndexHandler: TaskHandler<'file.index'> = {
   },
   // L'indexation n'a pas de timeline : seules ses données (via l'API agent) comptent.
   async onStep() {},
+  onDraft() {},
   // Les chunks et l'analyse ont été enregistrés par `PUT /api/agent/files/:id/index-data`, qui passe le fichier en `ready`.
   async onComplete() {},
   async onFail(userId, payload, error, final) {
@@ -49,6 +52,9 @@ const chatReplyHandler: TaskHandler<'chat.reply'> = {
   },
   async onStep(userId, payload, position, step) {
     await appendStep(userId, { conversationId: payload.conversationId, messageId: payload.messageId, position, step });
+  },
+  onDraft(userId, payload, text) {
+    publishDraft(userId, { conversationId: payload.conversationId, messageId: payload.messageId, text });
   },
   async onComplete(userId, payload, result) {
     await saveAssistantReply(userId, {

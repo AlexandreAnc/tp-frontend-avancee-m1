@@ -39,6 +39,8 @@ export class ServerConnection {
   private reconnectTimer: NodeJS.Timeout | undefined;
   private stopped = false;
   private readonly sampleStats = createStatsSampler();
+  /** Annoncé par le serveur dans `welcome` : un ancien serveur rejetterait `task.draft` et couperait la connexion. */
+  acceptsDrafts = false;
 
   constructor(
     private readonly config: AgentConfig,
@@ -119,6 +121,7 @@ export class ServerConnection {
     switch (message.type) {
       case 'welcome':
         this.reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+        this.acceptsDrafts = message.drafts === true;
         this.startHeartbeat(message.heartbeatIntervalMs);
         console.info(`[agent] connecté en tant que ${this.config.AGENT_NAME} (protocole v${message.protocolVersion})`);
         return;
@@ -147,6 +150,7 @@ export class ServerConnection {
   }
 
   private cleanup(): void {
+    this.acceptsDrafts = false;
     clearInterval(this.heartbeat);
     this.heartbeat = undefined;
   }

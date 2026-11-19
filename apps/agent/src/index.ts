@@ -9,7 +9,7 @@ const features = [capabilities.supportsThinking && 'raisonnement', capabilities.
 console.info(`[agent] modèles prêts (chat : ${config.CHAT_MODEL}${features ? ` — ${features}` : ''} ; embeddings : ${config.EMBED_MODEL})`);
 
 // `runner` et `connection` se référencent : le runner envoie ses résultats par la connexion.
-const runner: TaskRunner = new TaskRunner(config, capabilities, (message) => connection.send(message));
+const runner: TaskRunner = new TaskRunner(config, capabilities, (message) => connection.send(message), () => connection.acceptsDrafts);
 const connection: ServerConnection = new ServerConnection(config, {
   onMessage: (message) => {
     if (message.type === 'task.assign') runner.run(message);

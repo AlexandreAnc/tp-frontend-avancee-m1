@@ -18,6 +18,8 @@ export interface OrchestratorInput {
   history: { role: 'user' | 'assistant'; content: string }[];
   context: ToolContext;
   emitStep: (step: AgentStep) => Promise<void>;
+  /** Réponse finale en cours d'écriture (affichage mot à mot). */
+  emitDraft?: (text: string) => void;
   signal: AbortSignal;
   now?: Date;
 }
@@ -39,7 +41,7 @@ export function delegationTools(): Tool[] {
  * Orchestrateur : découpe la demande, délègue aux spécialistes (en parallèle quand les sous-tâches
  * sont indépendantes), enchaîne si besoin, puis rédige la réponse finale à partir de leurs comptes rendus.
  */
-export async function runOrchestrator({ history, context, emitStep, signal, now = new Date() }: OrchestratorInput): Promise<string> {
+export async function runOrchestrator({ history, context, emitStep, emitDraft, signal, now = new Date() }: OrchestratorInput): Promise<string> {
   return runLoop({
     role: 'orchestrator',
     system: buildOrchestratorPrompt(now, context.timezone),
@@ -48,6 +50,7 @@ export async function runOrchestrator({ history, context, emitStep, signal, now 
     maxIterations: MAX_ORCHESTRATOR_ITERATIONS,
     llm: context.llm,
     emitStep,
+    ...(emitDraft && { onDraft: emitDraft }),
     signal,
     runCall: async ({ name, args, callId }, emit) => {
       const rejectCall = async (error: string) => {

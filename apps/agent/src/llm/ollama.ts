@@ -46,17 +46,25 @@ export class LlmClient {
     return this.config.EMBED_MODEL;
   }
 
-  async chat(request: Omit<ChatRequest, 'model' | 'stream' | 'messages'> & { messages: ChatMessage[] }): Promise<{ message: ChatMessage }> {
+  /**
+   * `onContent` : reçoit le texte écrit jusqu'ici à mesure que le modèle l'écrit (réponse en flux, Ollama uniquement ;
+   * les fournisseurs externes répondent d'un bloc). Le résultat est le même message complet dans les deux cas.
+   */
+  async chat(request: Omit<ChatRequest, 'model' | 'stream' | 'messages'> & { messages: ChatMessage[]; onContent?: (text: string) => void }): Promise<{ message: ChatMessage }> {
+    const { onContent, ...rest } = request;
     if (this.chatBackend) {
-      return this.chatBackend.chat({ messages: request.messages, tools: request.tools, think: request.think === true }, this.signal);
+      return this.chatBackend.chat({ messages: rest.messages, tools: rest.tools, think: rest.think === true }, this.signal);
     }
     try {
       const options = {
-        ...request.options,
+        ...rest.options,
         ...(this.config.CHAT_CONTEXT && { num_ctx: this.config.CHAT_CONTEXT }),
         ...(this.config.CHAT_MAX_TOKENS && { num_predict: this.config.CHAT_MAX_TOKENS }),
       };
-      const response = await this.ollama.chat({ ...request, options, model: this.config.CHAT_MODEL, stream: false });
+      const chatRequest = { ...rest, options, model: this.config.CHAT_MODEL };
+      const response = onContent
+        ? await this.streamChat(chatRequest, onContent)
+        : await this.ollama.chat({ ...chatRequest, stream: false });
       // Réponse coupée par la limite : le modèle a bouclé. Une réponse tronquée ne vaut rien, on échoue tout de suite.
       if (response.done_reason === 'length') {
         const limit = this.config.CHAT_MAX_TOKENS ? `après ${this.config.CHAT_MAX_TOKENS} tokens` : 'par la fenêtre de contexte';
@@ -66,6 +74,27 @@ export class LlmClient {
     } catch (error) {
       throw this.wrap(error);
     }
+  }
+
+  /** Lit la réponse morceau par morceau et la recompose : texte, réflexion et appels d'outils. */
+  private async streamChat(request: Omit<ChatRequest, 'stream'>, onContent: (text: string) => void): Promise<{ message: ChatMessage; done_reason?: string }> {
+    let content = '';
+    let thinking = '';
+    const toolCalls: NonNullable<ChatMessage['tool_calls']> = [];
+    let doneReason: string | undefined;
+    for await (const chunk of await this.ollama.chat({ ...request, stream: true })) {
+      if (chunk.message.thinking) thinking += chunk.message.thinking;
+      if (chunk.message.tool_calls?.length) toolCalls.push(...chunk.message.tool_calls);
+      if (chunk.message.content) {
+        content += chunk.message.content;
+        onContent(content);
+      }
+      if (chunk.done) doneReason = chunk.done_reason;
+    }
+    return {
+      message: { role: 'assistant', content, ...(thinking && { thinking }), ...(toolCalls.length > 0 && { tool_calls: toolCalls }) },
+      done_reason: doneReason,
+    };
   }
 
   async embed(texts: string[]): Promise<number[][]> {

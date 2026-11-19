@@ -13,6 +13,7 @@ export async function replyToChat(payload: ChatReplyPayload, context: TaskContex
     history: payload.history,
     context: { api: context.api, llm, timezone: context.timezone },
     emitStep: context.emitStep,
+    emitDraft: context.emitDraft,
     signal: context.signal,
   });
   return { content: content || EMPTY_ANSWER };

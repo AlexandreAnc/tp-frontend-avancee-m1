@@ -12,6 +12,7 @@ import type { AgentConfig } from '../config';
 import { checkModels, LlmClient, type ModelCheck } from '../llm/ollama';
 import { replyToChat } from './chat-reply';
 import type { TaskContext } from './context';
+import { createDraftSender } from './draft-sender';
 import { errorMessage, TaskCancelledError, TaskError } from './errors';
 import { indexFile } from './index-file';
 
@@ -28,6 +29,8 @@ export class TaskRunner {
     private readonly config: AgentConfig,
     private capabilities: ModelCheck,
     private readonly send: (message: AgentToServerMessage) => void,
+    /** Le serveur connecté accepte les brouillons de réponse (`welcome.drafts`). */
+    private readonly serverAcceptsDrafts: () => boolean = () => false,
   ) {}
 
   /**
@@ -77,6 +80,7 @@ export class TaskRunner {
     const payload = taskPayloadSchemas[type].safeParse(message.payload);
     if (!payload.success) throw new TaskError(`Payload ${type} invalide`, false);
 
+    const drafts = createDraftSender((text) => this.send({ type: 'task.draft', taskId: message.taskId, text }));
     const context: TaskContext = {
       taskId: message.taskId,
       api: new ApiClient(this.config.SERVER_URL, message.token, signal),
@@ -87,13 +91,21 @@ export class TaskRunner {
         if (signal.aborted) throw new TaskCancelledError();
         this.send({ type: 'task.step', taskId: message.taskId, step });
       },
+      emitDraft: (text: string) => {
+        if (!signal.aborted && this.serverAcceptsDrafts()) drafts.push(text);
+      },
     };
 
     console.info(`[agent] ${type} ${message.taskId} démarrée`);
     const implementation = taskImplementations[type] as (payload: TaskPayload<TaskType>, context: TaskContext) => Promise<unknown>;
-    const result = await implementation(payload.data, context);
-    console.info(`[agent] ${type} ${message.taskId} terminée`);
-    return result;
+    try {
+      const result = await implementation(payload.data, context);
+      console.info(`[agent] ${type} ${message.taskId} terminée`);
+      return result;
+    } finally {
+      // Aucun brouillon après la fin : la réponse définitive (ou l'échec) part juste après.
+      drafts.stop();
+    }
   }
 
   cancel(taskId: string): void {

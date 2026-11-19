@@ -27,6 +27,7 @@ function setup(llmConfig: ChatLlmConfig) {
     timezone: 'Europe/Paris',
     signal,
     emitStep: vi.fn(),
+    emitDraft: vi.fn(),
   };
   return { context, llm, external, withChatBackend, signal };
 }
@@ -42,6 +43,7 @@ describe('replyToChat', () => {
       history: payload.history,
       context: { api: context.api, llm, timezone: 'Europe/Paris' },
       emitStep: context.emitStep,
+      emitDraft: context.emitDraft,
       signal,
     });
   });

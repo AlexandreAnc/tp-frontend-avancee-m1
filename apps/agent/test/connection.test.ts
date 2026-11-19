@@ -147,6 +147,17 @@ describe('ServerConnection', () => {
     expect(socket().ofType('heartbeat').at(-1)).toEqual({ type: 'heartbeat' });
   });
 
+  it('n’envoie de brouillons qu’à un serveur qui les annonce, et oublie l’annonce à la déconnexion', () => {
+    const { connection, socket } = setup();
+    socket().open();
+    socket().receive(welcome);
+    expect(connection.acceptsDrafts).toBe(false);
+    socket().receive({ ...welcome, drafts: true });
+    expect(connection.acceptsDrafts).toBe(true);
+    socket().drop();
+    expect(connection.acceptsDrafts).toBe(false);
+  });
+
   it('répond au ping avec le même nonce', async () => {
     const { socket } = setup();
     socket().open();

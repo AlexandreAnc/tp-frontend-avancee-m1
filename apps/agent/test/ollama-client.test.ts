@@ -8,6 +8,10 @@ const config = { OLLAMA_URL: 'http://ollama.test', CHAT_MODEL: 'dashia-qwen3', E
 
 type Route = (body: Record<string, unknown>) => unknown;
 
+class NdJson {
+  constructor(readonly chunks: unknown[]) {}
+}
+
 /** Ollama simulé : une réponse par route (`/api/chat`, `/api/embed`…), corps des requêtes conservés. */
 function fakeOllama(routes: Record<string, Route>) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
@@ -18,7 +22,10 @@ function fakeOllama(routes: Record<string, Route>) {
     const route = routes[path];
     if (!route) return Response.json({ error: `route ${path} absente` }, { status: 404 });
     try {
-      return Response.json(route(body));
+      const result = route(body);
+      // Réponse en flux : une ligne JSON par morceau (NDJSON), comme Ollama avec `stream: true`.
+      if (result instanceof NdJson) return new Response(result.chunks.map((chunk) => `${JSON.stringify(chunk)}\n`).join(''));
+      return Response.json(result);
     } catch (error) {
       return Response.json({ error: (error as Error).message }, { status: 500 });
     }
@@ -36,6 +43,30 @@ const client = (overrides: Partial<typeof config> = {}, signal = new AbortContro
 afterEach(() => vi.unstubAllGlobals());
 
 describe('LlmClient.chat (Ollama)', () => {
+  it('en flux, transmet le texte écrit jusqu’ici à chaque morceau et recompose le message complet', async () => {
+    const piece = (message: Record<string, unknown>, done = false) => ({ model: config.CHAT_MODEL, message: { role: 'assistant', content: '', ...message }, done, ...(done && { done_reason: 'stop' }) });
+    const requests = fakeOllama({ '/api/chat': () => new NdJson([
+      piece({ thinking: 'Je ' }),
+      piece({ thinking: 'réfléchis' }),
+      piece({ content: 'Bon' }),
+      piece({ content: 'jour' }),
+      piece({ content: '', tool_calls: [{ function: { name: 'outil', arguments: {} } }] }),
+      piece({}, true),
+    ]) });
+    const drafts: string[] = [];
+    const response = await client().chat({ messages: [{ role: 'user', content: 'Salut' }], onContent: (text) => drafts.push(text) });
+
+    expect(requests[0]!.body).toMatchObject({ stream: true });
+    expect(requests[0]!.body).not.toHaveProperty('onContent');
+    expect(drafts).toEqual(['Bon', 'Bonjour']);
+    expect(response.message).toEqual({ role: 'assistant', content: 'Bonjour', thinking: 'Je réfléchis', tool_calls: [{ function: { name: 'outil', arguments: {} } }] });
+  });
+
+  it('en flux aussi, refuse une réponse coupée par la limite de tokens', async () => {
+    fakeOllama({ '/api/chat': () => new NdJson([{ model: config.CHAT_MODEL, message: { role: 'assistant', content: 'blabla' }, done: true, done_reason: 'length' }]) });
+    await expect(client().chat({ messages: [], onContent: () => {} })).rejects.toThrow(/interrompue après 1024 tokens/);
+  });
+
   it('transmet la fenêtre de contexte et la longueur maximale de réponse', async () => {
     const requests = fakeOllama({ '/api/chat': chatReply() });
     const response = await client().chat({ messages: [{ role: 'user', content: 'Coucou' }], options: { temperature: 0 } });

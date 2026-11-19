@@ -7,6 +7,8 @@ export type ClientEvent =
   | { type: 'file.deleted'; fileId: string }
   | { type: 'message.status'; conversationId: string; messageId: string; status: 'queued' | 'processing' | 'done' | 'failed' }
   | { type: 'message.created'; conversationId: string; message: ChatMessage }
+  /** Réponse en cours d'écriture (texte complet jusqu'ici, vide = effacé). Remplacée par `message.created`. */
+  | { type: 'message.draft'; conversationId: string; messageId: string; text: string }
   | { type: 'agent.step'; conversationId: string; messageId: string; position: number; step: AgentStep; at: string }
   | { type: 'action.created'; actionId: string }
   | { type: 'action.updated'; actionId: string; status: PendingActionStatus }
