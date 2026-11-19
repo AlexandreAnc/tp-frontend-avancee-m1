@@ -9,4 +9,6 @@ export interface TaskContext {
   timezone: string;
   signal: AbortSignal;
   emitStep: (step: AgentStep) => Promise<void>;
+  /** Brouillon de la réponse, envoyé au serveur s'il l'accepte (sinon ignoré). */
+  emitDraft: (text: string) => void;
 }

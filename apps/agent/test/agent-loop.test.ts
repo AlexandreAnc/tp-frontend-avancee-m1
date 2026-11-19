@@ -87,15 +87,41 @@ describe('runOrchestrator', () => {
   function setup(replies: Replies, api: Record<string, unknown> = {}, content = 'Quoi de neuf ?') {
     const { llm, calls } = scriptedLlm(replies);
     const { steps, emitStep } = collect();
+    const drafts: string[] = [];
     const run = () => runOrchestrator({
       history: [{ role: 'user', content }],
       context: fakeContext(api, llm),
       emitStep,
+      emitDraft: (text) => drafts.push(text),
       signal: new AbortController().signal,
       now: new Date('2026-10-22T10:00:00Z'),
     });
-    return { run, steps, calls };
+    return { run, steps, calls, drafts };
   }
+
+  it('écrit la réponse finale en flux, efface le brouillon d’un tour qui finit par une délégation, et jamais celui des spécialistes', async () => {
+    const { run, calls, drafts } = setup({
+      orchestrator: [
+        { content: 'Je regarde.', tool_calls: [call('ask_documents', { task: 'Montant dû au plombier ?' })] },
+        { content: 'Vous devez 340,50 EUR.' },
+      ],
+      documents: [{ content: '340,50 EUR, facture.md' }],
+    });
+    await expect(run()).resolves.toBe('Vous devez 340,50 EUR.');
+    expect(drafts).toEqual(['Je reg', 'Je regarde.', '', 'Vous devez ', 'Vous devez 340,50 EUR.']);
+    expect(calls.filter((entry) => entry.streamed).map((entry) => entry.role)).toEqual(['orchestrator', 'orchestrator']);
+  });
+
+  it('écrit aussi en flux la réponse forcée après le dernier tour', async () => {
+    const delegate = { tool_calls: [call('ask_documents', { task: 'Cherche' })] };
+    const { run, drafts } = setup({
+      orchestrator: [...Array.from({ length: MAX_ORCHESTRATOR_ITERATIONS }, () => delegate), { content: 'Voici ce que j’ai.' }],
+      documents: Array.from({ length: MAX_ORCHESTRATOR_ITERATIONS }, () => ({ content: 'rien' })),
+    });
+    await expect(run()).resolves.toBe('Voici ce que j’ai.');
+    expect(drafts.at(-1)).toBe('Voici ce que j’ai.');
+    expect(drafts).not.toContain('');
+  });
 
   it('répond directement sans déléguer quand la demande ne touche pas aux données', async () => {
     const { run, steps, calls } = setup({ orchestrator: [{ content: 'Bonjour !' }] });

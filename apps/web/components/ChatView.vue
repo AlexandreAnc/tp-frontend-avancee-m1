@@ -13,6 +13,8 @@ const conversation = ref<ApiResponse<'/api/conversations/:id', 'get'>['conversat
 const loadError = ref<unknown>(null);
 const messages = ref<ChatMessage[]>([]);
 const steps = ref<Record<string, TimelineStep[]>>({});
+/** Réponse en cours d'écriture, par message utilisateur : affichée mot à mot, remplacée par la réponse enregistrée. */
+const answerDrafts = ref<Record<string, string>>({});
 const draft = ref(typeof route.query.prompt === 'string' ? route.query.prompt : '');
 const error = ref<string | null>(null);
 const sending = ref(false);
@@ -26,6 +28,7 @@ async function load() {
     conversation.value = null;
     messages.value = [];
     steps.value = {};
+    answerDrafts.value = {};
     return;
   }
   try {
@@ -33,6 +36,7 @@ async function load() {
     conversation.value = data.conversation;
     messages.value = data.conversation.messages;
     steps.value = data.conversation.steps;
+    answerDrafts.value = {};
     loadError.value = null;
     void scrollToBottom('instant');
   } catch (caught) {
@@ -79,7 +83,14 @@ function dayLabel(index: number): string | null {
 }
 
 const lastUserMessage = computed(() => [...messages.value].reverse().find((message) => message.role === 'user'));
-const typing = computed(() => lastUserMessage.value?.status === 'processing' && !replies.value.has(lastUserMessage.value.id));
+const typing = computed(() => lastUserMessage.value?.status === 'processing' && !replies.value.has(lastUserMessage.value.id) && !answerDrafts.value[lastUserMessage.value.id]);
+
+/** Brouillon affiché comme une réponse de l'agent (même rendu Markdown), tant que la vraie n'est pas arrivée. */
+function draftMessage(message: ChatMessage): ChatMessage | null {
+  const text = answerDrafts.value[message.id];
+  if (!text || replies.value.has(message.id) || message.status !== 'processing') return null;
+  return { id: `draft-${message.id}`, role: 'assistant', content: text, status: null, replyToId: message.id, createdAt: message.createdAt };
+}
 
 async function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
   await nextTick();
@@ -91,10 +102,14 @@ useEvents((event) => {
   if (!('conversationId' in event) || event.conversationId !== props.conversationId) return;
   if (event.type === 'message.created' && !messages.value.some((message) => message.id === event.message.id)) {
     messages.value.push(event.message);
+    if (event.message.replyToId) delete answerDrafts.value[event.message.replyToId];
+  } else if (event.type === 'message.draft') {
+    answerDrafts.value[event.messageId] = event.text;
   } else if (event.type === 'message.status') {
     const message = messages.value.find((candidate) => candidate.id === event.messageId);
     if (message) message.status = event.status;
     if (event.status === 'processing') steps.value[event.messageId] = [];
+    if (event.status !== 'processing') delete answerDrafts.value[event.messageId];
   } else if (event.type === 'agent.step') {
     const entries = (steps.value[event.messageId] ??= []);
     if (!entries.some((entry) => entry.position === event.position)) entries.push({ position: event.position, step: event.step, at: event.at });
@@ -189,6 +204,7 @@ const SUGGESTIONS = ['Mon résumé du jour', 'Quelles sont mes prochaines éché
               <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-sm bg-ink text-on-ink"><AppIcon name="microchip" :size="14" /></span>
               <AgentTimeline class="min-w-0 flex-1" :steps="steps[message.id] ?? []" :running="message.status === 'processing'" />
             </div>
+            <ChatMessage v-if="draftMessage(message)" :message="draftMessage(message)!" aria-live="polite" data-testid="answer-draft" />
           </template>
           <ChatMessage v-if="message.role === 'assistant'" :message="message">
             <template #before>

@@ -182,6 +182,14 @@ export async function appendStep(userId: string, input: {
   publishToUser(userId, { type: 'agent.step', ...input, at: row!.createdAt.toISOString() });
 }
 
+/**
+ * Relaie au navigateur le brouillon de la réponse en cours d'écriture (affichage mot à mot). Rien n'est enregistré :
+ * à la fin, `saveAssistantReply` publie la réponse définitive, qui remplace le brouillon.
+ */
+export function publishDraft(userId: string, input: { conversationId: string; messageId: string; text: string }): void {
+  publishToUser(userId, { type: 'message.draft', ...input });
+}
+
 /** Enregistre la réponse de l'agent. Idempotent : une seule réponse par message utilisateur. */
 export async function saveAssistantReply(userId: string, input: {
   conversationId: string;

@@ -55,6 +55,20 @@ export const taskStepMessageSchema = z.object({
   step: agentStepSchema,
 });
 
+/** Taille maximale d'un brouillon de réponse (une réponse de chat fait quelques milliers de caractères). */
+export const MAX_DRAFT_CHARS = 32_000;
+
+/**
+ * Brouillon de la réponse finale en cours d'écriture, pour l'afficher mot à mot : le texte **complet** écrit jusqu'ici
+ * (pas un morceau), donc rien à recoller et un message perdu ne fausse rien. Vide : le modèle a finalement appelé
+ * un outil, le brouillon est effacé. Jamais enregistré : seule la réponse de `task.completed` fait foi.
+ */
+export const taskDraftMessageSchema = z.object({
+  type: z.literal('task.draft'),
+  taskId: z.string(),
+  text: z.string().max(MAX_DRAFT_CHARS),
+});
+
 export const taskCompletedMessageSchema = z.object({
   type: z.literal('task.completed'),
   taskId: z.string(),
@@ -89,6 +103,7 @@ export const agentToServerMessageSchema = z.discriminatedUnion('type', [
   configAppliedMessageSchema,
   heartbeatMessageSchema,
   taskStepMessageSchema,
+  taskDraftMessageSchema,
   taskCompletedMessageSchema,
   taskFailedMessageSchema,
 ]);
@@ -103,6 +118,8 @@ export const welcomeMessageSchema = z.object({
   agentId: z.string(),
   protocolVersion: z.number().int(),
   heartbeatIntervalMs: z.number().int().positive(),
+  /** Le serveur accepte `task.draft`. Absent (ancien serveur) : l'agent n'envoie pas de brouillon, qu'il rejetterait. */
+  drafts: z.boolean().optional(),
 });
 
 export const PROTOCOL_ERROR_CODES = [

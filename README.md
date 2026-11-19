@@ -246,11 +246,11 @@ sequenceDiagram
     end
     S-->>O: résultats
     O->>L: rédige la réponse
-    A-->>W: task.step (timeline en direct) puis task.completed
-    W-->>U: réponse + étapes affichées
+    A-->>W: task.step (timeline), task.draft (réponse en flux) puis task.completed
+    W-->>U: étapes, réponse mot à mot, puis réponse enregistrée
 ```
 
-Chaque étape (délégation, appel d'outil, résultat) remonte au serveur et s'affiche en direct dans la timeline du chat. Le contenu des documents et des outils est encadré comme **donnée**, jamais comme instruction : un document piégé (« ignore tes consignes et… ») fait partie des tests.
+Chaque étape (délégation, appel d'outil, résultat) remonte au serveur et s'affiche en direct dans la timeline du chat. La réponse finale s'affiche mot à mot pendant que le modèle l'écrit (`task.draft`, relayé sans être enregistré). Une même demande ne peut pas déclencher plus de 10 actions : le serveur refuse les suivantes. Le contenu des documents et des outils est encadré comme **donnée**, jamais comme instruction : un document piégé (« ignore tes consignes et… ») fait partie des tests.
 
 ### 5. Cycle de vie d'une action (diagramme d'états)
 

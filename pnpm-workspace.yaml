@@ -9,3 +9,5 @@ allowBuilds:
 overrides:
   node-forge: ^1.4.1
   body-parser: ^2.4.0
+  # Rollup 4.68 fails to parse nuxt's renderer on Alpine (musl): "Code is nested too deeply". Unpin once fixed upstream.
+  rollup: 4.64.12

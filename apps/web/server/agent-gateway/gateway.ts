@@ -114,6 +114,9 @@ export async function handleMessage(connectionId: string, raw: string): Promise<
     case 'task.step':
       await onStep(agent, message.taskId, message.step);
       return;
+    case 'task.draft':
+      onDraft(agent, message.taskId, message.text);
+      return;
     case 'task.completed':
       await onCompleted(agent, message.taskId, message.result);
       return;
@@ -196,7 +199,7 @@ async function registerAgent(connectionId: string, socket: AgentSocket, hello: H
     tasks: new Map(),
   });
   await touchAgentKey(key.id);
-  send(socket, { type: 'welcome', agentId: key.id, protocolVersion: PROTOCOL_VERSION, heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS });
+  send(socket, { type: 'welcome', agentId: key.id, protocolVersion: PROTOCOL_VERSION, heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS, drafts: true });
 
   // Modèle choisi depuis l'app pour cette machine : réappliqué à chaque connexion.
   if (key.chatModel && key.chatModel !== hello.chatModel && (hello.models ?? []).some((model) => model.name === key.chatModel)) {
@@ -254,6 +257,11 @@ async function onStep(agent: ConnectedAgent, taskId: string, step: AgentStep): P
   if (!task) return;
   const position = task.stepCount++;
   await handlerFor(task.type).onStep(task.userId, task.payload, position, step);
+}
+
+function onDraft(agent: ConnectedAgent, taskId: string, text: string): void {
+  const task = agent.tasks.get(taskId);
+  if (task) handlerFor(task.type).onDraft(task.userId, task.payload, text);
 }
 
 async function onCompleted(agent: ConnectedAgent, taskId: string, rawResult: unknown): Promise<void> {

@@ -20,7 +20,8 @@ import type { z } from 'zod';
 import { errorMessage, TaskError } from '../tasks/errors';
 
 /** Statuts pour lesquels réessayer ne changerait rien (token expiré, fichier supprimé, données refusées). */
-const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 409, 410, 413, 415, 422]);
+// 429 : limite d'actions de la tâche atteinte. Rendue au modèle comme une erreur d'outil, pas une panne à réessayer.
+const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 409, 410, 413, 415, 422, 429]);
 
 /**
  * Client de l'API de prod, authentifié par le token de la tâche en cours.

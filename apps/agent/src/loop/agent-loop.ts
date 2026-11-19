@@ -27,6 +27,11 @@ export interface LoopInput {
   llm: LlmClient;
   emitStep: (step: AgentStep) => Promise<void>;
   signal: AbortSignal;
+  /**
+   * Brouillon de la réponse finale, à mesure qu'elle s'écrit (orchestrateur seulement : c'est lui qui répond).
+   * Appelé avec `''` quand un tour se termine finalement par des appels d'outils : le texte affiché n'était pas la réponse.
+   */
+  onDraft?: (text: string) => void;
   /** Exécute un appel et renvoie le texte rendu au modèle. Publie ses propres étapes via `emit`. */
   runCall: (call: ToolCall, emit: (step: LocalStep) => Promise<void>) => Promise<string>;
 }
@@ -54,10 +59,15 @@ export async function runLoop(input: LoopInput): Promise<string> {
   const emit = (step: LocalStep) => input.emitStep({ ...step, agent: role, ...(parentId ? { parentId } : {}) } as AgentStep);
   const messages: Message[] = [{ role: 'system', content: input.system }, ...input.history];
   const prefix = parentId ?? role;
+  let drafted = false;
+  const onContent = input.onDraft && ((text: string) => {
+    drafted = true;
+    input.onDraft!(text);
+  });
 
   for (let iteration = 0; iteration < input.maxIterations; iteration++) {
     signal.throwIfAborted();
-    const { message } = await llm.chat({ messages, tools: input.tools, think: llm.supportsThinking });
+    const { message } = await llm.chat({ messages, tools: input.tools, think: llm.supportsThinking, ...(onContent && { onContent }) });
 
     if (message.thinking?.trim()) await emit({ kind: 'thinking', text: message.thinking.trim() });
     messages.push(message);
@@ -68,6 +78,10 @@ export async function runLoop(input: LoopInput): Promise<string> {
       callId: `${prefix}.${iteration}.${index}`,
     }));
     if (calls.length === 0) return message.content.trim();
+    if (drafted) {
+      drafted = false;
+      input.onDraft!('');
+    }
 
     // Tous les appels vont au bout avant de propager une erreur fatale : pas d'étape orpheline.
     const settled = await Promise.allSettled(calls.map((call) => input.runCall(call, emit)));
@@ -80,6 +94,6 @@ export async function runLoop(input: LoopInput): Promise<string> {
 
   signal.throwIfAborted();
   messages.push({ role: 'user', content: FORCE_ANSWER_PROMPT });
-  const { message } = await llm.chat({ messages, think: false });
+  const { message } = await llm.chat({ messages, think: false, ...(onContent && { onContent }) });
   return message.content.trim();
 }

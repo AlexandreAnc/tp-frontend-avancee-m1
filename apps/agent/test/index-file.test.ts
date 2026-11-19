@@ -64,7 +64,7 @@ describe('indexFile', () => {
       }),
       saveIndex: vi.fn(async () => ({ chunkCount: 1 })),
     };
-    const context = { taskId: 't1', api: api as unknown as ApiClient, llm, timezone: 'Europe/Paris', signal, emitStep: vi.fn() } satisfies TaskContext;
+    const context = { taskId: 't1', api: api as unknown as ApiClient, llm, timezone: 'Europe/Paris', signal, emitStep: vi.fn(), emitDraft: vi.fn() } satisfies TaskContext;
     const run = () => indexFile({ fileId: FILE_ID, fileName: 'facture.md', mimeType: 'text/markdown' }, context);
     const workDirRemoved = () => expect(access(dirname(downloadedTo))).rejects.toThrow();
     return { run, api, embed, workDirRemoved };

@@ -1,3 +1,4 @@
+import { MAX_AGENT_ACTIONS_PER_TASK } from '@app/shared';
 import { getRequestIP, type H3Event } from 'h3';
 import { AppError } from './errors';
 
@@ -57,4 +58,11 @@ export const shareRateLimit = createRateLimiter({
   limit: 60,
   windowMs: 60_000,
   message: 'Trop de requêtes. Réessayez dans une minute.',
+});
+
+/** Actions et routines demandées par l'agent, par tâche (la durée de vie d'un token de tâche). */
+export const agentActionRateLimit = createRateLimiter({
+  limit: MAX_AGENT_ACTIONS_PER_TASK,
+  windowMs: 35 * 60_000,
+  message: `Limite de ${MAX_AGENT_ACTIONS_PER_TASK} actions pour une même demande atteinte : n'en lance pas d'autre, dis à l'utilisateur ce qui a été fait et ce qui reste à faire.`,
 });

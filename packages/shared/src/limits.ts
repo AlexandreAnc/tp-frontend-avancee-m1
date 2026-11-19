@@ -54,5 +54,11 @@ export const MAX_AGENT_ITERATIONS = 8;
 /** Nombre maximal de tours de délégation de l'orchestrateur avant sa réponse finale. */
 export const MAX_ORCHESTRATOR_ITERATIONS = 4;
 
+/**
+ * Actions (directes ou à valider) et routines qu'une seule demande peut déclencher. Une demande légitime en lance
+ * une ou deux ; un document piégé qui pousse l'agent à enchaîner les actions est arrêté ici, côté serveur.
+ */
+export const MAX_AGENT_ACTIONS_PER_TASK = 10;
+
 /** Longueur maximale d'un message utilisateur dans le chat. */
 export const MAX_CHAT_MESSAGE_LENGTH = 4000;

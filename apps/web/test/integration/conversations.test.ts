@@ -111,6 +111,21 @@ describe.skipIf(skipDb)('conversations', () => {
     expect(sent.filter((entry) => entry.userId === userId)).toEqual([]);
   });
 
+  it('relaie le brouillon de la réponse au seul utilisateur concerné, sans rien enregistrer', async () => {
+    const userId = await createUser();
+    const other = await createUser();
+    const { conversationId, message } = await chat.startConversation(userId, 'Bonjour');
+    const events: ClientEvent[] = [];
+    const otherEvents: ClientEvent[] = [];
+    const unsubscribe = [subscribe(userId, (event) => events.push(event)), subscribe(other, (event) => otherEvents.push(event))];
+    chat.publishDraft(userId, { conversationId, messageId: message.id, text: 'Bonjour, je' });
+    unsubscribe.forEach((stop) => stop());
+
+    expect(events).toEqual([{ type: 'message.draft', conversationId, messageId: message.id, text: 'Bonjour, je' }]);
+    expect(otherEvents).toEqual([]);
+    expect((await chat.getConversation(userId, conversationId)).messages).toHaveLength(1);
+  });
+
   it('stocke les étapes de l’agent par message, et les efface quand la tâche est reprise', async () => {
     const userId = await createUser();
     const { conversationId, message } = await chat.startConversation(userId, 'Cherche mon bail');

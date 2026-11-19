@@ -20,9 +20,9 @@ const chatTask = (taskId: string, payload: unknown = {
   history: [{ role: 'user', content: 'Bonjour' }],
 }): TaskAssignMessage => ({ type: 'task.assign', taskId, taskType: 'chat.reply', token: 'token', payload });
 
-function setup() {
+function setup(acceptsDrafts = false) {
   const sent: AgentToServerMessage[] = [];
-  const runner = new TaskRunner(config, { supportsThinking: false, supportsVision: false }, (message) => void sent.push(message));
+  const runner = new TaskRunner(config, { supportsThinking: false, supportsVision: false }, (message) => void sent.push(message), () => acceptsDrafts);
   const settled = () => vi.waitFor(() => expect(runner.size).toBe(0));
   return { runner, sent, settled };
 }
@@ -48,6 +48,43 @@ describe('TaskRunner', () => {
     runner.run(chatTask('t1'));
     await settled();
     expect(sent).toEqual([{ type: 'task.completed', taskId: 't1', result: { content: 'Bonjour !' } }]);
+  });
+
+  it('envoie les brouillons regroupés, puis plus rien après la réponse définitive', async () => {
+    vi.useFakeTimers();
+    try {
+      const task = pending();
+      replyToChat.mockImplementationOnce(async (_payload: unknown, context: TaskContext) => {
+        context.emitDraft('Bon');
+        context.emitDraft('Bonjour');
+        await vi.advanceTimersByTimeAsync(200);
+        context.emitDraft('Bonjour, voici');
+        return task.promise;
+      });
+      const { runner, sent } = setup(true);
+      runner.run(chatTask('t-draft'));
+      await vi.advanceTimersByTimeAsync(0);
+      task.finish({ content: 'Bonjour, voici la réponse.' });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(sent).toEqual([
+        { type: 'task.draft', taskId: 't-draft', text: 'Bonjour' },
+        { type: 'task.completed', taskId: 't-draft', result: { content: 'Bonjour, voici la réponse.' } },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('n’envoie aucun brouillon à un serveur qui ne les accepte pas', async () => {
+    replyToChat.mockImplementationOnce(async (_payload: unknown, context: TaskContext) => {
+      context.emitDraft('Bonjour');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return { content: 'Bonjour' };
+    });
+    const { runner, sent, settled } = setup(false);
+    runner.run(chatTask('t-old-server'));
+    await settled();
+    expect(sent.map((message) => message.type)).toEqual(['task.completed']);
   });
 
   it('refuse un payload invalide sans le réessayer', async () => {

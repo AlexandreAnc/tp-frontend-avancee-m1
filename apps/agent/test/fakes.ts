@@ -23,15 +23,21 @@ export type Replies = Partial<Record<AgentRole, Partial<Message>[]>>;
 /** Modèle factice : chaque agent (reconnu à son prompt système) dépile ses propres réponses. */
 export function scriptedLlm(replies: Replies) {
   const queues = Object.fromEntries(Object.entries(replies).map(([role, list]) => [role, [...list]])) as Replies;
-  const calls: { role: AgentRole; messages: Message[]; tools?: { function: { name: string } }[] }[] = [];
+  const calls: { role: AgentRole; messages: Message[]; tools?: { function: { name: string } }[]; streamed: boolean }[] = [];
   const roleOf = (system: string): AgentRole =>
     (Object.keys(SPECIALISTS) as (keyof typeof SPECIALISTS)[]).find((name) => system.includes(`spécialiste ${SPECIALISTS[name].label} d'une équipe`)) ?? 'orchestrator';
-  const chat = vi.fn(async (request: { messages: Message[]; tools?: { function: { name: string } }[] }) => {
+  const chat = vi.fn(async (request: { messages: Message[]; tools?: { function: { name: string } }[]; onContent?: (text: string) => void }) => {
     const role = roleOf(request.messages[0]!.content);
-    calls.push({ role, messages: [...request.messages], tools: request.tools });
+    calls.push({ role, messages: [...request.messages], tools: request.tools, streamed: Boolean(request.onContent) });
     // Laisse les spécialistes lancés en parallèle s'entrelacer.
     await new Promise((resolve) => setTimeout(resolve, 1));
-    return { message: { role: 'assistant', content: '', ...queues[role]?.shift() } } as ChatResponse;
+    const message = { role: 'assistant', content: '', ...queues[role]?.shift() };
+    // Réponse en flux : le texte arrive en deux morceaux.
+    if (request.onContent && message.content) {
+      request.onContent(message.content.slice(0, Math.ceil(message.content.length / 2)));
+      request.onContent(message.content);
+    }
+    return { message } as ChatResponse;
   });
   const llm = { chat, supportsThinking: true } as unknown as LlmClient;
   return { llm, calls };
