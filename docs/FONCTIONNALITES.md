@@ -92,6 +92,7 @@ Grille de blocs (1 colonne mobile, 2-3 colonnes desktop) :
 - **Timeline de l'agent** sous chaque question ✅ :
   - pendant le traitement : indicateur animé + étape en cours (« Recherche par le sens « Plomberie Martin » ») ;
   - ensuite repliée : « 4 étape(s) de l'agent » ▸, dépliable ;
+  - la réponse finale s'affiche mot à mot pendant que le modèle l'écrit, puis la réponse enregistrée la remplace ✅ ;
   - types d'étape : Réflexion (texte en italique), appel d'outil (Liste des fichiers, Lecture d'un fichier, Recherche par le sens, Recherche exacte, Proposition d'événement, Contrôle des lampes 🔜3, Création de rappel 🔜1), résultat (« 1 résultat(s) »), erreur.
 - 💡 **Carte d'action dans la discussion** quand l'agent propose une action (au lieu de seulement « une demande vous a été envoyée ») : résumé + Valider / Refuser.
 - 💡 **Confirmation d'action directe** dans la discussion : « 💡 Salon éteint » avec « Annuler ».

@@ -356,11 +356,11 @@ pnpm --filter web test:e2e   # Playwright : parcours, accessibilité, sécurité
 
 | Paquet | Tests | Lignes | Instructions | Branches | Fonctions |
 |---|---|---|---|---|---|
-| `apps/web` (services, utils, connecteurs) | 233 | **98,4 %** | 96,3 % | 86,1 % | 97,1 % |
-| `apps/agent` | 180 | **99,8 %** | 99,5 % | 96,6 % | 100 % |
+| `apps/web` (services, utils, connecteurs) | 255 | **98,4 %** | 96,4 % | 86,5 % | 97,2 % |
+| `apps/agent` | 199 | **99,8 %** | 99,3 % | 96,6 % | 99,4 % |
 | `packages/shared` | 31 | **100 %** | 100 % | 100 % | 100 % |
 
-Au total **444 tests unitaires et d'intégration**, plus **48 tests E2E** Playwright. Les seuils de couverture de chaque paquet sont fixés juste sous ces valeurs dans son `vitest.config.ts` : la CI échoue si la couverture baisse.
+Au total **485 tests unitaires et d'intégration**, plus **63 tests E2E** Playwright. Les seuils de couverture de chaque paquet sont fixés juste sous ces valeurs dans son `vitest.config.ts` : la CI échoue si la couverture baisse.
 
 **Ce que les tests vérifient vraiment :**
 
