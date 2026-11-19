@@ -1,9 +1,10 @@
+import { MAX_AGENT_ACTIONS_PER_TASK } from '@app/shared';
 import { describe, expect, it } from 'vitest';
 import { decrypt, encrypt, generateToken, hashToken, safeEqual } from '../../server/utils/crypto';
 import { AppError } from '../../server/utils/errors';
 import { createEvent } from 'h3';
 import { isAgentMessageTooLarge, MAX_AGENT_MESSAGE_CHARS, MAX_HELLO_MESSAGE_CHARS } from '../../server/utils/agent-socket-limits';
-import { clientIp, createRateLimiter } from '../../server/utils/rate-limit';
+import { agentActionRateLimit, clientIp, createRateLimiter } from '../../server/utils/rate-limit';
 import { buildSnippet } from '../../server/services/search';
 
 describe('chiffrement des tokens OAuth', () => {
@@ -89,5 +90,13 @@ describe('limites du WebSocket des agents', () => {
     expect(isAgentMessageTooLarge(hello, true)).toBe(false);
     expect(isAgentMessageTooLarge('x'.repeat(MAX_AGENT_MESSAGE_CHARS + 1), true)).toBe(true);
     expect(isAgentMessageTooLarge('{"type":"hello"}', false)).toBe(false);
+  });
+});
+
+describe('agentActionRateLimit', () => {
+  it('arrête une même demande après le nombre maximal d’actions, sans gêner les autres demandes', () => {
+    for (let index = 0; index < MAX_AGENT_ACTIONS_PER_TASK; index++) agentActionRateLimit('tache-piegee');
+    expect(() => agentActionRateLimit('tache-piegee')).toThrow(expect.objectContaining({ code: 'rate_limited', message: expect.stringContaining('dis à l\'utilisateur') }));
+    expect(() => agentActionRateLimit('autre-tache')).not.toThrow();
   });
 });

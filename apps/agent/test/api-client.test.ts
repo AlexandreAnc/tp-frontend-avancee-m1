@@ -34,6 +34,8 @@ describe('ApiClient', () => {
     [403, { retryable: false, fatal: true }],
     [404, { retryable: false, fatal: false }],
     [413, { retryable: false, fatal: false }],
+    // Limite d'actions de la tâche : rendue au modèle, qui s'arrête et rend compte.
+    [429, { retryable: false, fatal: false }],
     [503, { retryable: true, fatal: true }],
   ])('classe une réponse %i (réessayer ? arrêter la tâche ?)', async (status, expected) => {
     const { api } = client(() => Response.json({ message: 'refusé' }, { status }));
