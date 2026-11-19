@@ -38,7 +38,7 @@ Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`I
 
 | Exigence | État | Où |
 |---|---|---|
-| Nom, IA, méta-framework, interpréteur | ✅ Nuxt 4 + TypeScript, Node.js 24 ; IA : agent local Ollama (`qwen3:4b`, `gemma4:26b`), Claude / ChatGPT / Mistral / Gemini au choix ; Claude Code comme assistant de développement | `README.md` (Stack), `IA-POSTURE.md` |
+| Nom, IA, méta-framework, interpréteur | ✅ Nuxt 4 + TypeScript, Node.js 24 ; IA : agent local Ollama (`dashia-qwen3`, Qwen3-4B fine-tuné à partir de `gemma4:26b`), Claude / ChatGPT / Mistral / Gemini au choix ; Claude Code comme assistant de développement | `README.md` (Stack), `IA-POSTURE.md` |
 | Thématique | ✅ Assistant IA personnel multi-agents (documents, planning, maison) | `README.md`, `SCOPE.md` |
 | Maquette Figma → interface fidèle | ✅ Tokens de la maquette dans le `@theme` Tailwind, migration vérifiée au pixel près | `AGENTS.md` (CSS), `IA-POSTURE.md` (étude de cas) |
 | Accessibilité, Lighthouse | ✅ Site public : 100 en accessibilité ; axe-core WCAG 2.2 AA en CI (clair et sombre) | `README.md` (Site public), `apps/web/e2e/marketing.spec.ts`, `/accessibilite` |
@@ -55,4 +55,4 @@ Thème choisi : **thème 5, agentique, IA acteur et posture critique** (voir [`I
 
 ## Reste à faire pour coller à la consigne
 
-Toutes les exigences sont couvertes. Avant l'oral : fusionner les PR, vérifier la prod, et finir le fine-tuning (`docs/FINETUNING.md`).
+Toutes les exigences sont couvertes. Le modèle fine-tuné tourne en production (`docs/FINETUNING.md`) et un audit de sécurité final a été corrigé (accès admin, zip bombs, jetons de tâche, limites du WebSocket, dépendances).
