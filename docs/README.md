@@ -140,7 +140,7 @@ pnpm --filter web agent-key:create macbook-pro
 pnpm --filter agent dev      # agent local
 ```
 
-Dans `apps/web/.env` : `BETTER_AUTH_SECRET` et `ENCRYPTION_KEY` (`openssl rand -base64 32`), les clés VAPID (`pnpm --filter web vapid:generate`), et `ADMIN_EMAILS` pour accéder à la page « Agents ». Le connecteur Google est optionnel (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, URI de redirection `<BETTER_AUTH_URL>/api/connectors/google/callback`).
+Dans `apps/web/.env` : `BETTER_AUTH_SECRET` et `ENCRYPTION_KEY` (`openssl rand -base64 32`), les clés VAPID (`pnpm --filter web vapid:generate`), et `ADMIN_EMAILS` pour accéder à la page « Agents ». L'inscription ne vérifie pas l'e-mail : une adresse admin n'a les droits qu'une fois confirmée par l'exploitant, après inscription (`pnpm --filter web admin:grant <email>`). Le connecteur Google est optionnel (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, URI de redirection `<BETTER_AUTH_URL>/api/connectors/google/callback`).
 
 Philips Hue (optionnel) : créez une application sur developers.meethue.com (« Remote Hue API »), avec l'URI de redirection `<BETTER_AUTH_URL>/api/connectors/hue/callback`, puis renseignez `HUE_CLIENT_ID` / `HUE_CLIENT_SECRET`. La connexion se fait depuis la page Maison ; l'appairage du pont est automatique.
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { decrypt, encrypt, generateToken, hashToken, safeEqual } from '../../server/utils/crypto';
 import { AppError } from '../../server/utils/errors';
-import { createRateLimiter } from '../../server/utils/rate-limit';
+import { createEvent } from 'h3';
+import { isAgentMessageTooLarge, MAX_AGENT_MESSAGE_CHARS, MAX_HELLO_MESSAGE_CHARS } from '../../server/utils/agent-socket-limits';
+import { clientIp, createRateLimiter } from '../../server/utils/rate-limit';
 import { buildSnippet } from '../../server/services/search';
 
 describe('chiffrement des tokens OAuth', () => {
@@ -62,5 +64,30 @@ describe('buildSnippet', () => {
     expect(snippet).toContain('Facture N° 2026-042');
     expect(snippet.startsWith('…')).toBe(true);
     expect(snippet.endsWith('…')).toBe(true);
+  });
+});
+
+describe('clientIp', () => {
+  const eventWith = (headers: Record<string, string>) => createEvent(
+    { url: '/', method: 'GET', headers, socket: { remoteAddress: '10.0.0.9' } } as never,
+    {} as never,
+  );
+
+  it('lit l’IP posée par le proxy et ignore x-forwarded-for, que le client peut forger', () => {
+    expect(clientIp(eventWith({ 'x-real-ip': '203.0.113.7', 'x-forwarded-for': '1.2.3.4, 203.0.113.7' }))).toBe('203.0.113.7');
+  });
+
+  it('retombe sur l’adresse de la connexion sans proxy (dev)', () => {
+    expect(clientIp(eventWith({ 'x-forwarded-for': '1.2.3.4' }))).toBe('10.0.0.9');
+  });
+});
+
+describe('limites du WebSocket des agents', () => {
+  it('refuse un message trop gros avant de l’analyser, plus strictement avant l’authentification', () => {
+    const hello = 'x'.repeat(MAX_HELLO_MESSAGE_CHARS + 1);
+    expect(isAgentMessageTooLarge(hello, false)).toBe(true);
+    expect(isAgentMessageTooLarge(hello, true)).toBe(false);
+    expect(isAgentMessageTooLarge('x'.repeat(MAX_AGENT_MESSAGE_CHARS + 1), true)).toBe(true);
+    expect(isAgentMessageTooLarge('{"type":"hello"}', false)).toBe(false);
   });
 });

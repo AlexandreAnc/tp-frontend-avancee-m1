@@ -6,8 +6,19 @@ import { getEnv } from '../utils/env';
 
 const { pushSubscriptions } = schema;
 
+/**
+ * Services de push des navigateurs (Chrome/Edge, Firefox, Safari, Windows). Le serveur envoie un POST à l'adresse
+ * d'abonnement à chaque notification : une adresse libre en ferait un relais vers n'importe quel hôte (SSRF).
+ */
+const PUSH_SERVICE_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^([\w-]+\.)*push\.apple\.com$/, /^([\w-]+\.)*notify\.windows\.com$/];
+
+export function isPushServiceUrl(value: string): boolean {
+  const url = URL.parse(value);
+  return url?.protocol === 'https:' && PUSH_SERVICE_HOSTS.some((host) => host.test(url.hostname));
+}
+
 export const pushSubscriptionSchema = z.object({
-  endpoint: z.url(),
+  endpoint: z.url().refine(isPushServiceUrl, 'Service de notification inconnu'),
   keys: z.object({
     p256dh: z.string().min(1),
     auth: z.string().min(1),

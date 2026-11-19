@@ -5,7 +5,7 @@ import { requireTaskToken } from '../../../../utils/task-auth';
 import { getUuidParam } from '../../../../utils/validation';
 
 export default defineAppHandler(async (event) => {
-  const { userId } = await requireTaskToken(event);
+  const { userId } = await requireTaskToken(event, ['file.index']);
   const { file, stream } = await openFileForAgent(userId, getUuidParam(event));
   setResponseHeaders(event, {
     'content-type': file.mimeType,

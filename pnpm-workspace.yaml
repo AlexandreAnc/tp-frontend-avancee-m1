@@ -4,3 +4,8 @@ packages:
 
 allowBuilds:
   esbuild: true
+
+# Correctifs de sécurité de dépendances indirectes (pnpm audit), dans la même version majeure.
+overrides:
+  node-forge: ^1.4.1
+  body-parser: ^2.4.0

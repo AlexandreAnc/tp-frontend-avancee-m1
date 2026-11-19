@@ -7,6 +7,7 @@ import { extractImage } from './image';
 import { extractPdf } from './pdf';
 import { extractPlainText } from './text';
 import { extractXlsx } from './xlsx';
+import { assertSafeZip } from './zip-guard';
 
 type Extractor = (buffer: Buffer, llm: LlmClient, mimeType: AllowedMimeType) => Promise<string> | string;
 
@@ -20,6 +21,12 @@ const extractors: Record<AllowedMimeType, Extractor> = {
   'image/png': extractImage,
   'image/heic': extractImage,
 };
+
+/** Formats Office : des archives zip, vérifiées avant d'être décompressées par les bibliothèques de lecture. */
+const ZIP_MIME_TYPES: readonly AllowedMimeType[] = [
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
 
 /** Normalise les espaces sans casser les paragraphes (utilisés pour le découpage). */
 export function normalizeText(text: string): string {
@@ -36,6 +43,7 @@ export async function extractTextFromFile(path: string, mimeType: string, llm: L
     throw new TaskError(`Type de fichier non pris en charge : ${mimeType}`, false);
   }
   const buffer = await readFile(path);
+  if (ZIP_MIME_TYPES.includes(mimeType)) assertSafeZip(buffer);
   try {
     return normalizeText(await extractors[mimeType](buffer, llm, mimeType));
   } catch (error) {

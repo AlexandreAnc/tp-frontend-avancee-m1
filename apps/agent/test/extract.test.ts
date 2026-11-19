@@ -9,6 +9,7 @@ import { extractXlsx } from '../src/extract/xlsx';
 import type { LlmClient } from '../src/llm/ollama';
 import { TaskError } from '../src/tasks/errors';
 import { fakeLlm } from './fakes';
+import { makeZip } from './zip';
 
 // Les bibliothèques de lecture sont simulées : on teste ce que l'agent fait de leur résultat.
 const libs = vi.hoisted(() => ({
@@ -62,8 +63,15 @@ describe('extractTextFromFile', () => {
 
   it('extrait le texte brut d’un document Word', async () => {
     libs.extractRawText.mockResolvedValue({ value: 'Bail  de location' });
-    const path = await fileWith('PK');
+    const path = await fileWith(makeZip([{ name: 'word/document.xml', content: '<w:document/>' }]));
     await expect(extractTextFromFile(path, DOCX, fakeLlm([]).llm)).resolves.toBe('Bail de location');
+  });
+
+  it('refuse une archive piégée avant de la confier à la bibliothèque de lecture', async () => {
+    libs.extractRawText.mockClear();
+    const path = await fileWith(Buffer.from('PK pas une archive'));
+    await expect(extractTextFromFile(path, DOCX, fakeLlm([]).llm)).rejects.toMatchObject({ retryable: false, message: expect.stringContaining('Document refusé') });
+    expect(libs.extractRawText).not.toHaveBeenCalled();
   });
 
   it('transforme un fichier corrompu en erreur non réessayable', async () => {
@@ -137,7 +145,7 @@ describe('extractXlsx', () => {
 
   it('est utilisé pour les classeurs Excel', async () => {
     libs.readXlsxFile.mockResolvedValue([{ sheet: 'S', data: [['x']] }]);
-    const path = await fileWith('PK');
+    const path = await fileWith(makeZip([{ name: 'xl/workbook.xml', content: '<workbook/>' }]));
     await expect(extractTextFromFile(path, XLSX, fakeLlm([]).llm)).resolves.toBe('# Feuille « S »\nx');
   });
 });
