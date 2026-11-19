@@ -65,6 +65,15 @@ export async function requestAction(userId: string, input: {
 }
 
 /**
+ * Ce que l'action fera réellement, lu dans son payload. Le résumé est écrit par l'agent : un document piégé peut lui
+ * faire annoncer « Rendez-vous dentiste » pour un événement au contenu différent. La validation montre les deux.
+ */
+export function describeActionPayload(action: ProposedAction): string | null {
+  if (action.type === 'google_calendar.create_event') return `Événement « ${action.payload.title} »`;
+  return null;
+}
+
+/**
  * Enregistre une action à valider. Elle ne sera exécutée par le serveur
  * qu'après validation explicite de l'utilisateur, avant `expiresAt`.
  */
@@ -89,7 +98,7 @@ async function createPendingAction(userId: string, input: {
   const sensitive = row!.risk === 'sensitive';
   await sendToUser(userId, {
     title: sensitive ? 'Validation requise' : 'Action à valider',
-    body: input.summary,
+    body: [describeActionPayload(input.action), input.summary].filter(Boolean).join('\n'),
     url: `/actions/${row!.id}`,
     tag: `action-${row!.id}`,
     // Une action sensible se valide dans l'app (Face ID impossible depuis une notification) : pas de boutons.

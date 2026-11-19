@@ -1,6 +1,6 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db, schema } from '../db';
 import { AppError } from '../utils/errors';
 import { getSettings } from './settings';
@@ -42,29 +42,46 @@ export async function removeUnlockPin(userId: string): Promise<void> {
     .where(eq(userSettings.userId, userId));
 }
 
-/** Vérifie le code de secours, avec blocage temporaire après `MAX_PIN_FAILURES` erreurs. */
+function lockedError(lockedUntil: Date, now: Date): AppError {
+  return new AppError('rate_limited', 'Trop d’essais : réessayez dans quelques minutes, ou utilisez Face ID / votre mot de passe.', {
+    retryAfterMs: Math.max(0, lockedUntil.getTime() - now.getTime()),
+  });
+}
+
+/**
+ * Vérifie le code de secours, avec blocage temporaire après `MAX_PIN_FAILURES` erreurs.
+ * L'essai est compté **avant** la vérification, en une seule requête atomique : des essais envoyés en parallèle
+ * ne peuvent pas passer entre la lecture et l'écriture du compteur pour dépasser la limite.
+ */
 export async function verifyUnlockPin(userId: string, pin: string, now = new Date()): Promise<void> {
   const settings = await getSettings(userId);
   if (!settings.unlockPinHash) throw new AppError('conflict', 'Aucun code de secours n’est défini.');
-  if (settings.unlockPinLockedUntil && settings.unlockPinLockedUntil > now) {
-    throw new AppError('rate_limited', 'Trop d’essais : réessayez dans quelques minutes, ou utilisez Face ID / votre mot de passe.', {
-      retryAfterMs: settings.unlockPinLockedUntil.getTime() - now.getTime(),
-    });
-  }
+
+  const [attempt] = await db.update(userSettings)
+    .set({ unlockPinFailures: sql`${userSettings.unlockPinFailures} + 1`, unlockPinLockedUntil: null })
+    .where(and(
+      eq(userSettings.userId, userId),
+      lt(userSettings.unlockPinFailures, MAX_PIN_FAILURES),
+      or(isNull(userSettings.unlockPinLockedUntil), lte(userSettings.unlockPinLockedUntil, now)),
+    ))
+    .returning({ failures: userSettings.unlockPinFailures });
+  if (!attempt) throw lockedError(settings.unlockPinLockedUntil ?? new Date(now.getTime() + LOCKOUT_MS), now);
 
   if (PIN_PATTERN.test(pin) && await matches(pin, settings.unlockPinHash)) {
     await db.update(userSettings).set({ unlockPinFailures: 0, unlockPinLockedUntil: null }).where(eq(userSettings.userId, userId));
     return;
   }
 
-  const failures = settings.unlockPinFailures + 1;
+  const { failures } = attempt;
   const locked = failures >= MAX_PIN_FAILURES;
-  await db.update(userSettings).set({
-    unlockPinFailures: locked ? 0 : failures,
-    unlockPinLockedUntil: locked ? new Date(now.getTime() + LOCKOUT_MS) : null,
-  }).where(eq(userSettings.userId, userId));
+  if (locked) {
+    await db.update(userSettings)
+      .set({ unlockPinFailures: 0, unlockPinLockedUntil: new Date(now.getTime() + LOCKOUT_MS) })
+      .where(eq(userSettings.userId, userId));
+  }
+  const left = MAX_PIN_FAILURES - failures;
   throw new AppError(
     'forbidden',
-    locked ? 'Code incorrect. Trop d’essais : le code est bloqué 15 minutes.' : `Code incorrect. ${MAX_PIN_FAILURES - failures} essai${MAX_PIN_FAILURES - failures > 1 ? 's' : ''} restant${MAX_PIN_FAILURES - failures > 1 ? 's' : ''}.`,
+    locked ? 'Code incorrect. Trop d’essais : le code est bloqué 15 minutes.' : `Code incorrect. ${left} essai${left > 1 ? 's' : ''} restant${left > 1 ? 's' : ''}.`,
   );
 }

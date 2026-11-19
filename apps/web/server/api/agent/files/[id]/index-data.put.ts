@@ -6,7 +6,7 @@ import { requireTaskToken } from '../../../../utils/task-auth';
 import { getUuidParam, readValidatedBodyOrThrow } from '../../../../utils/validation';
 
 export default defineAppHandler(async (event) => {
-  const { userId } = await requireTaskToken(event);
+  const { userId } = await requireTaskToken(event, ['file.index']);
   const data = await readValidatedBodyOrThrow(event, indexFileRequestSchema);
   const fileId = getUuidParam(event);
   const result = await saveFileIndex(userId, fileId, data);

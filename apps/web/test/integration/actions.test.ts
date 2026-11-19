@@ -37,6 +37,12 @@ describe.skipIf(skipDb)('actions en attente', () => {
     expect(sent.at(-1)).toMatchObject({ url: `/actions/${actionId}`, action: { id: actionId }, badge: 1 });
   });
 
+  it('montre dans la notification le titre réel de l’événement, pas seulement le résumé rédigé par l’agent', async () => {
+    const userId = await createUser();
+    await propose(userId);
+    expect(sent.at(-1)!.body).toBe('Événement « Payer le plombier »\nAjouter un événement');
+  });
+
   it("n'exécute l'action qu'une seule fois, même validée deux fois en même temps", async () => {
     executeAction.mockResolvedValue({ eventId: 'evt' });
     const userId = await createUser();

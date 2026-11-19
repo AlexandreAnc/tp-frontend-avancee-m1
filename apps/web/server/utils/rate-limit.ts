@@ -1,4 +1,14 @@
+import { getRequestIP, type H3Event } from 'h3';
 import { AppError } from './errors';
+
+/**
+ * IP du visiteur pour les limites par IP. En prod, Caddy pose `x-real-ip` à partir de la seule IP transmise par
+ * Cloudflare. Jamais la première valeur de `x-forwarded-for` : le client l'écrit lui-même, et une valeur aléatoire
+ * à chaque requête suffirait à contourner la limite.
+ */
+export function clientIp(event: H3Event): string {
+  return event.headers.get('x-real-ip')?.trim() || getRequestIP(event) || 'unknown';
+}
 
 interface Window {
   count: number;

@@ -16,6 +16,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "agent-key:create": "tsx --env-file-if-exists=.env scripts/create-agent-key.ts",
+    "admin:grant": "tsx --env-file-if-exists=.env scripts/grant-admin.ts",
     "vapid:generate": "web-push generate-vapid-keys"
   },
   "dependencies": {

@@ -35,6 +35,16 @@ describe.skipIf(skipDb)('code de secours', () => {
     await verifyUnlockPin(userId, '482915', later);
   });
 
+  it('compte chaque essai, même envoyés en parallèle : jamais plus de 5 essais avant le blocage', async () => {
+    const userId = await createUser();
+    await setUnlockPin(userId, '482915');
+    const results = await Promise.allSettled(Array.from({ length: 12 }, () => verifyUnlockPin(userId, '000000')));
+    const codes = results.map((result) => (result as PromiseRejectedResult).reason.code);
+    expect(codes.filter((code) => code === 'forbidden')).toHaveLength(MAX_PIN_FAILURES);
+    expect(codes.filter((code) => code === 'rate_limited')).toHaveLength(12 - MAX_PIN_FAILURES);
+    await expect(verifyUnlockPin(userId, '482915')).rejects.toMatchObject({ code: 'rate_limited' });
+  });
+
   it('remet le compteur à zéro après un bon code', async () => {
     const userId = await createUser();
     await setUnlockPin(userId, '482915');

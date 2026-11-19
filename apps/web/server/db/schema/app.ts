@@ -32,6 +32,7 @@ import {
   uuid,
   vector,
 } from 'drizzle-orm/pg-core';
+import type { TaskType } from '@app/shared';
 import { sql } from 'drizzle-orm';
 import { user } from './auth';
 
@@ -220,6 +221,8 @@ export const taskTokens = pgTable('task_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: userId(),
   taskId: text('task_id').notNull(),
+  /** Type de la tâche : le token n'ouvre que les routes dont ce type a besoin (`requireTaskToken`). */
+  taskType: text('task_type').$type<TaskType>().notNull(),
   /** Conversation concernée (tâches de chat) : les actions proposées y sont rattachées. */
   conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }),
   tokenHash: text('token_hash').notNull().unique(),

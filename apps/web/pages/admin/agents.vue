@@ -3,6 +3,7 @@ useHead({ title: 'Agents locaux · DashIA' });
 
 const { data, error: loadError, refresh } = await useFetch('/api/admin/agent-keys', { key: 'agent-keys' });
 const { ask } = useConfirm();
+const { withStepUp } = useStepUp();
 const name = ref('');
 const createdKey = ref<{ name: string; key: string } | null>(null);
 const error = ref<string | null>(null);
@@ -14,7 +15,7 @@ useEvents((event) => {
 async function create() {
   error.value = null;
   try {
-    const { key, agentKey } = await $fetch('/api/admin/agent-keys', { method: 'POST', body: { name: name.value } });
+    const { key, agentKey } = await withStepUp(() => $fetch<{ key: string; agentKey: { name: string } }>('/api/admin/agent-keys', { method: 'POST', body: { name: name.value } }));
     createdKey.value = { name: agentKey.name, key };
     name.value = '';
     await refresh();

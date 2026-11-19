@@ -18,7 +18,7 @@ vi.mock('web-push', () => ({
 const push = await import('../../server/services/push');
 
 let counter = 0;
-const device = () => ({ endpoint: `https://push.example.com/${Date.now()}-${counter++}`, keys: { p256dh: 'p256dh', auth: 'auth' } });
+const device = () => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${Date.now()}-${counter++}`, keys: { p256dh: 'p256dh', auth: 'auth' } });
 const endpointsOf = async (userId: string) =>
   (await db.select().from(schema.pushSubscriptions).where(eq(schema.pushSubscriptions.userId, userId))).map((row) => row.endpoint);
 
@@ -27,6 +27,13 @@ describe.skipIf(skipDb)('notifications push', () => {
     expect(push.getVapidPublicKey()).toBe('test');
     expect(push.pushSubscriptionSchema.safeParse(device()).success).toBe(true);
     expect(push.pushSubscriptionSchema.safeParse({ endpoint: 'pas une url', keys: { p256dh: 'a', auth: 'b' } }).success).toBe(false);
+    for (const endpoint of ['https://web.push.apple.com/abc', 'https://updates.push.services.mozilla.com/wpush/v2/abc', 'https://wns2-par02p.notify.windows.com/w/?token=abc']) {
+      expect(push.pushSubscriptionSchema.safeParse({ ...device(), endpoint }).success, endpoint).toBe(true);
+    }
+    // Ni hôte tiers ou interne, ni domaine qui se fait passer pour un service connu, ni HTTP.
+    for (const endpoint of ['https://attaquant.example/hook', 'https://fcm.googleapis.com.evil.example/x', 'https://evilpush.apple.com/x', 'http://fcm.googleapis.com/fcm/send/x', 'https://10.0.0.1/x']) {
+      expect(push.pushSubscriptionSchema.safeParse({ ...device(), endpoint }).success, endpoint).toBe(false);
+    }
   });
 
   it("rattache un appareil au dernier compte connecté (un même navigateur, deux comptes)", async () => {

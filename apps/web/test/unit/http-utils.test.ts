@@ -10,8 +10,8 @@ import { getExternalAiProviderParam, getUuidParam, getValidatedQueryOrThrow, rea
 
 const getSession = vi.fn();
 vi.mock('../../server/utils/auth', () => ({ getAuth: () => ({ api: { getSession } }) }));
-const verifyTaskToken = vi.fn(async (token: string) => ({ userId: 'u1', taskId: token, conversationId: null }));
-vi.mock('../../server/services/task-tokens', () => ({ verifyTaskToken: (token: string) => verifyTaskToken(token) }));
+const verifyTaskToken = vi.fn(async (token: string, _allowed: readonly string[]) => ({ userId: 'u1', taskId: token, taskType: 'chat.reply', conversationId: null }));
+vi.mock('../../server/services/task-tokens', () => ({ verifyTaskToken: (token: string, allowed: readonly string[]) => verifyTaskToken(token, allowed) }));
 
 process.env.ADMIN_EMAILS = ' Admin@Example.com , autre@example.com';
 
@@ -85,11 +85,11 @@ describe('validation des entrées', () => {
 
 describe('session', () => {
   afterEach(() => getSession.mockReset());
-  const sessionOf = (email: string) => ({ user: { id: 'u1', email, name: 'Alice' }, session: { id: 's1' } });
+  const sessionOf = (email: string, emailVerified = true) => ({ user: { id: 'u1', email, name: 'Alice', emailVerified }, session: { id: 's1' } });
 
   it('renvoie l’utilisateur connecté avec sa session', async () => {
     getSession.mockResolvedValue(sessionOf('alice@example.com'));
-    expect((await call('/me', '/me', requireUser)).body).toEqual({ id: 'u1', email: 'alice@example.com', name: 'Alice', sessionId: 's1' });
+    expect((await call('/me', '/me', requireUser)).body).toEqual({ id: 'u1', email: 'alice@example.com', name: 'Alice', emailVerified: true, sessionId: 's1' });
   });
 
   it('refuse une requête sans session (401)', async () => {
@@ -104,7 +104,13 @@ describe('session', () => {
     expect((await call('/admin', '/admin', requireAdmin)).status).toBe(200);
     getSession.mockResolvedValue(sessionOf('alice@example.com'));
     expect((await call('/admin', '/admin', requireAdmin)).status).toBe(403);
-    expect(isAdmin({ id: 'u', email: 'autre@example.com', name: '', sessionId: '' })).toBe(true);
+    expect(isAdmin({ email: 'autre@example.com', emailVerified: true })).toBe(true);
+  });
+
+  it('refuse l’administration à une adresse admin non confirmée (inscription par un tiers)', async () => {
+    getSession.mockResolvedValue(sessionOf('admin@example.com', false));
+    expect((await call('/admin', '/admin', requireAdmin)).status).toBe(403);
+    expect(isAdmin({ email: 'admin@example.com', emailVerified: false })).toBe(false);
   });
 });
 
@@ -112,6 +118,7 @@ describe('token de tâche', () => {
   it('lit le token Bearer et le vérifie', async () => {
     const response = await call('/agent', '/agent', requireTaskToken, { headers: { authorization: 'Bearer abc' } });
     expect(response.body).toMatchObject({ userId: 'u1', taskId: 'abc' });
+    expect(verifyTaskToken).toHaveBeenLastCalledWith('abc', ['chat.reply']);
   });
 
   it('refuse un en-tête absent ou d’un autre type', async () => {

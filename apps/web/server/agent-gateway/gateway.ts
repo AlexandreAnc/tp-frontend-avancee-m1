@@ -21,6 +21,7 @@ import { isAgentKeyActive, setAgentKeyChatModel, touchAgentKey, verifyAgentKey }
 import { publishToAll } from '../services/events';
 import { taskEvents, type TaskSubject } from '../services/tasks';
 import { issueTaskToken, revokeTaskTokens } from '../services/task-tokens';
+import { isAgentMessageTooLarge, MAX_CONNECTIONS_AWAITING_HELLO } from '../utils/agent-socket-limits';
 import { getEnv } from '../utils/env';
 import { AppError } from '../utils/errors';
 import { agents, type AgentSocket, type ConnectedAgent, type InFlightTask } from './registry';
@@ -57,6 +58,10 @@ function rejectConnection(socket: AgentSocket, code: ProtocolErrorCode, message:
 const awaitingHello = new Map<string, { socket: AgentSocket; timer: NodeJS.Timeout }>();
 
 export function handleOpen(connectionId: string, socket: AgentSocket): void {
+  if (awaitingHello.size >= MAX_CONNECTIONS_AWAITING_HELLO) {
+    rejectConnection(socket, 'invalid_message', 'Trop de connexions en attente');
+    return;
+  }
   const timer = setTimeout(() => {
     awaitingHello.delete(connectionId);
     rejectConnection(socket, 'hello_timeout', 'Message hello attendu');
@@ -65,6 +70,16 @@ export function handleOpen(connectionId: string, socket: AgentSocket): void {
 }
 
 export async function handleMessage(connectionId: string, raw: string): Promise<void> {
+  if (isAgentMessageTooLarge(raw, agents.has(connectionId))) {
+    const waiting = awaitingHello.get(connectionId);
+    if (waiting) {
+      clearTimeout(waiting.timer);
+      awaitingHello.delete(connectionId);
+    }
+    const socket = waiting?.socket ?? agents.get(connectionId)?.socket;
+    if (socket) rejectConnection(socket, 'invalid_message', 'Message trop volumineux');
+    return;
+  }
   let message: AgentToServerMessage;
   try {
     message = agentToServerMessageSchema.parse(JSON.parse(raw));
@@ -363,7 +378,7 @@ async function assign(agent: ConnectedAgent, type: TaskType, job: JobWithMetadat
       await boss.complete(type, attempt, { skipped: 'objet supprimé' });
       return;
     }
-    const token = await issueTaskToken({ userId: task.userId, taskId: task.taskId, conversationId: prepared.conversationId });
+    const token = await issueTaskToken({ userId: task.userId, taskId: task.taskId, taskType: type, conversationId: prepared.conversationId });
     if (!agent.tasks.has(task.taskId)) {
       await revokeTaskTokens(task.taskId);
       return;

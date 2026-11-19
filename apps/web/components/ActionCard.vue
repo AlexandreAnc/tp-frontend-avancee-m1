@@ -26,7 +26,9 @@ const VISUALS: Record<string, { icon: IconName; tone: string }> = {
 };
 const visual = computed<{ icon: IconName; tone: string }>(() => VISUALS[props.action.type] ?? { icon: 'hand', tone: 'tone-warning' });
 
-const event = computed(() => props.action.payload as { title?: string; start?: string; end?: string; location?: string });
+const event = computed(() => props.action.payload as { title?: string; description?: string; start?: string; end?: string; location?: string });
+/** Contenu réel de l'événement : le résumé ci-dessus est rédigé par l'agent, ce payload est ce qui sera créé. */
+const isEvent = computed(() => props.action.type === 'google_calendar.create_event');
 const detail = computed(() => {
   if (props.action.type === 'google_calendar.create_event' && event.value.start) {
     return [formatDayLong(event.value.start), formatTime(event.value.start), event.value.location].filter(Boolean).join(' · ');
@@ -61,6 +63,14 @@ async function decide(decision: 'approve' | 'reject') {
         </div>
         <h3 class="text-[14px] leading-5" :class="compact ? 'font-bold' : 'font-extrabold'">{{ action.summary }}</h3>
         <p v-if="detail" class="text-2xs text-muted">{{ detail }}</p>
+        <dl v-if="isEvent && !compact" class="mt-2 grid gap-0.5 rounded-sm bg-surface-muted px-2.5 py-2 text-2xs" data-testid="action-payload">
+          <dt class="font-bold">Titre de l’événement</dt>
+          <dd class="break-words">{{ event.title }}</dd>
+          <template v-if="event.description">
+            <dt class="mt-1 font-bold">Description</dt>
+            <dd class="line-clamp-4 whitespace-pre-line break-words text-muted">{{ event.description }}</dd>
+          </template>
+        </dl>
         <p v-if="action.status === 'pending' && !compact" class="mt-1.5 flex items-center gap-1.5 text-2xs text-muted">
           <AppIcon name="comments" :size="10" />
           Expire {{ formatRelative(action.expiresAt) }} · sans validation, rien ne sera fait
